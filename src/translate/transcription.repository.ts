@@ -13,8 +13,8 @@ export class TranscriptionRepository {
         return this.transcriptionModel.create({ transcript, ip, jobId });
     }
 
-    async findByJobId(jobId: string) {
-        return this.transcriptionModel.findOne({ jobId });
+    async findByJobId(id: string) {
+        return this.transcriptionModel.findById(id);
     }
 
     async findByIp(ip: string) {
