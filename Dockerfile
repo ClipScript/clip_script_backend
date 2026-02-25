@@ -27,6 +27,9 @@ COPY cookies.txt /app/cookies.txt
 # Build the app (if using TypeScript)
 RUN npm run build
 
+# Remove dev dependencies for production
+RUN npm prune --production
+
 # Create tmp directory for video/audio files
 RUN mkdir -p /app/tmp
 
