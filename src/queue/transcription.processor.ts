@@ -34,7 +34,10 @@ export class TranscriptionProcessor {
         const ytDlpPath = process.platform === 'win32'
             ? path.join(__dirname, '../../bin/yt-dlp.exe')
             : '/usr/local/bin/yt-dlp';
-        const ytDlpVideoCmd = `${ytDlpPath} --cookies "${cookiesPath}" -f best -o "${videoPath}" "${videoUrl}"`;
+        // Use impersonation only for TikTok
+        const isTikTok = videoUrl.includes('tiktok.com');
+        const impersonateFlag = isTikTok ? '--impersonate chrome' : '';
+        const ytDlpVideoCmd = `${ytDlpPath} ${impersonateFlag} --cookies "${cookiesPath}" -f best -o "${videoPath}" "${videoUrl}"`;
         this.logger.log(`yt-dlp video command: ${ytDlpVideoCmd}`);
         try {
             await new Promise((resolve, reject) => {
@@ -65,7 +68,7 @@ export class TranscriptionProcessor {
         // 2. Download audio using yt-dlp and ffmpeg (Linux-compatible)
         const audioPath = path.join(tempDir, `${job.id}.mp3`);
         this.logger.log(`Audio will be saved to: ${audioPath}`);
-        const ytDlpCmd = `${ytDlpPath} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
+        const ytDlpCmd = `${ytDlpPath} ${impersonateFlag} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
         this.logger.log(`yt-dlp command: ${ytDlpCmd}`);
         try {
             await new Promise((resolve, reject) => {
