@@ -1,31 +1,32 @@
 # Use official Node.js LTS image
 FROM node:20-bullseye
 
-# Install all system, Python, Chromium, and build dependencies in one step
+# Install Python 3.11, Chromium, and all dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    ffmpeg \
-    python3 \
-    python3-pip \
-    python3-setuptools \
-    python3-wheel \
-    ca-certificates \
-    chromium \
-    chromium-driver \
-    build-essential \
-    python3-dev \
-    libffi-dev \
-    libssl-dev \
-    pkg-config \
-    libc-dev \
-    libc6-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    libbrotli-dev && \
-    pip3 install --upgrade pip && \
-    pip3 install 'yt-dlp[tiktok]' && \
-    apt-get remove -y build-essential python3-dev libffi-dev libssl-dev pkg-config libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev python3-wheel python3-setuptools && \
+        ffmpeg \
+        python3.11 \
+        python3.11-venv \
+        python3.11-distutils \
+        python3.11-dev \
+        ca-certificates \
+        chromium \
+        chromium-driver \
+        build-essential \
+        libffi-dev \
+        libssl-dev \
+        pkg-config \
+        libc-dev \
+        libc6-dev \
+        libxml2-dev \
+        libxslt1-dev \
+        zlib1g-dev \
+        libbrotli-dev && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    python3 --version && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install 'yt-dlp[tiktok]' && \
+    apt-get remove -y build-essential python3.11-dev libffi-dev libssl-dev pkg-config libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
