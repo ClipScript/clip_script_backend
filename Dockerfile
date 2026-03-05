@@ -5,7 +5,6 @@ RUN apt-get update && \
     ffmpeg \
     python3.11 \
     python3.11-venv \
-    python3-pip \
     python3.11-dev \
     ca-certificates \
     build-essential \
@@ -16,32 +15,31 @@ RUN apt-get update && \
     git \
     libcurl4-openssl-dev \
     openssl && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+    rm -rf /var/lib/apt/lists/*
 
-# Bootstrap pip for python3.11 explicitly
-RUN python3.11 -m ensurepip --upgrade && \
-    python3.11 -m pip install --upgrade pip --break-system-packages
+# Create a virtualenv - this gives us a clean pip with no Debian restrictions
+RUN python3.11 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Rust
+# Verify pip works inside venv
+RUN pip install --upgrade pip
+
+# Install Rust (required for curl-cffi compilation)
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Verify Rust
 RUN rustc --version && cargo --version
 
-# Install build tools
-RUN python3.11 -m pip install wheel setuptools --break-system-packages
+# Install packages inside venv - no --break-system-packages needed
+RUN pip install wheel setuptools
+RUN pip install curl-cffi
+RUN pip install 'yt-dlp[default]'
 
-# Install curl-cffi
-RUN python3.11 -m pip install curl-cffi --break-system-packages
+# Symlink yt-dlp so it's available system-wide
+RUN ln -sf /opt/venv/bin/yt-dlp /usr/local/bin/yt-dlp
 
-# Install yt-dlp
-RUN python3.11 -m pip install 'yt-dlp[default]' --break-system-packages
-
-# Make yt-dlp available on PATH
-RUN ln -sf /usr/local/bin/yt-dlp /usr/bin/yt-dlp
-
-# Verify everything works
+# Verify curl-cffi and impersonation work
 RUN python3.11 -c "import curl_cffi; print('curl-cffi OK:', curl_cffi.__version__)"
 RUN yt-dlp --list-impersonate-targets | grep -i chrome
 
