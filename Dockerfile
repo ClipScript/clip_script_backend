@@ -1,5 +1,5 @@
 # Use official Node.js LTS image
-FROM node:18-slim
+FROM node:18-bullseye
 
 # Install all system, Python, and build dependencies in one step
 RUN apt-get update && \
