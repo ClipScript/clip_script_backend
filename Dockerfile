@@ -1,7 +1,6 @@
-# Use Debian Bookworm which has Python 3.11 natively
 FROM node:20-bookworm
 
-# Install Python 3.11, Chromium, and all dependencies
+# Install system dependencies including OpenSSL and Rust (required for curl-cffi compilation)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
@@ -10,56 +9,59 @@ RUN apt-get update && \
     python3-pip \
     python3.11-dev \
     ca-certificates \
-    chromium \
-    chromium-driver \
     build-essential \
     libffi-dev \
     libssl-dev \
     pkg-config \
     libc-dev \
     libc6-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    libbrotli-dev \
-    libgmp-dev \
-    libgl1-mesa-glx \
-    libegl1-mesa && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    python3 --version && \
-    python3 -m pip install --upgrade pip --break-system-packages && \
-    python3 -m pip install 'yt-dlp[all]' --break-system-packages && \
-    python3 -m pip install PyQt5 PyQtWebEngine --break-system-packages && \
-    apt-get remove -y build-essential python3.11-dev libffi-dev libssl-dev libgmp-dev pkg-config \
-    libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev libgl1-mesa-glx libegl1-mesa && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+    curl \
+    git \
+    # These are specifically needed for curl-cffi's TLS fingerprinting
+    libcurl4-openssl-dev \
+    openssl \
+    libboringssl-dev 2>/dev/null || true && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
-# Set working directory
+# Install Rust (curl-cffi needs it for compilation)
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Python packages - curl-cffi must be installed before yt-dlp[all]
+RUN python3 -m pip install --upgrade pip --break-system-packages && \
+    python3 -m pip install wheel setuptools --break-system-packages && \
+    python3 -m pip install curl-cffi --break-system-packages && \
+    python3 -m pip install 'yt-dlp[default]' --break-system-packages
+
+# Verify impersonation targets are available
+RUN yt-dlp --list-impersonate-targets
+
+# Clean up build dependencies to reduce image size
+RUN apt-get remove -y \
+    build-essential \
+    python3.11-dev \
+    libffi-dev \
+    libssl-dev \
+    pkg-config \
+    libc-dev \
+    libc6-dev \
+    libcurl4-openssl-dev \
+    git && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* /root/.cargo/registry /root/.cargo/git
+
 WORKDIR /app
 
-# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Install NestJS CLI globally for build
 RUN npm install -g @nestjs/cli
 
-# Copy the rest of your app
 COPY . .
-
-# Copy cookies.txt into the image (for yt-dlp authentication)
 COPY cookies.txt /app/cookies.txt
 
-# Build the app
 RUN npm run build
-
-# Remove dev dependencies for production
 RUN npm prune --production
-
-# Create tmp directory for video/audio files
 RUN mkdir -p /app/tmp
 
 EXPOSE 3000
-
 CMD ["npm", "run", "start:prod"]

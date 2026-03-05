@@ -36,8 +36,15 @@ export class TranscriptionProcessor {
             : '/usr/local/bin/yt-dlp';
         // Use impersonation only for TikTok
         const isTikTok = videoUrl.includes('tiktok.com');
-        const impersonateFlag = isTikTok ? '--impersonate chrome' : '';
-        const ytDlpVideoCmd = `${ytDlpPath} ${impersonateFlag} --cookies "${cookiesPath}" -f best -o "${videoPath}" "${videoUrl}"`;
+        const tiktokFlags = isTikTok
+            ? [
+                '--impersonate chrome',
+                '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
+                '--add-header "Referer:https://www.tiktok.com/"',
+                '--extractor-args "tiktok:api_hostname=api22-normal-c-useast2a.tiktokv.com"'
+            ].join(' ')
+            : '';
+        const ytDlpVideoCmd = `${ytDlpPath} ${tiktokFlags} --cookies "${cookiesPath}" -f "bv*+ba/b" -o "${videoPath}" "${videoUrl}"`;
         this.logger.log(`yt-dlp video command: ${ytDlpVideoCmd}`);
         try {
             await new Promise((resolve, reject) => {
@@ -68,11 +75,11 @@ export class TranscriptionProcessor {
         // 2. Download audio using yt-dlp and ffmpeg (Linux-compatible)
         const audioPath = path.join(tempDir, `${job.id}.mp3`);
         this.logger.log(`Audio will be saved to: ${audioPath}`);
-        const ytDlpCmd = `${ytDlpPath} ${impersonateFlag} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
-        this.logger.log(`yt-dlp command: ${ytDlpCmd}`);
+        const ytDlpAudioCmd = `${ytDlpPath} ${tiktokFlags} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
+        this.logger.log(`yt-dlp command: ${ytDlpAudioCmd}`);
         try {
             await new Promise((resolve, reject) => {
-                exec(ytDlpCmd, (error, stdout, stderr) => {
+                exec(ytDlpAudioCmd, (error, stdout, stderr) => {
                     this.logger.log('yt-dlp stdout:', stdout);
                     this.logger.log('yt-dlp stderr:', stderr);
                     if (error) {
