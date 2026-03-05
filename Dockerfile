@@ -22,13 +22,16 @@ RUN apt-get update && \
     libxslt1-dev \
     zlib1g-dev \
     libbrotli-dev \
-    libgmp-dev && \
+    libgmp-dev \
+    libgl1-mesa-glx \
+    libegl1-mesa && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     python3 --version && \
     python3 -m pip install --upgrade pip --break-system-packages && \
     python3 -m pip install 'yt-dlp[all]' --break-system-packages && \
+    python3 -m pip install PyQt5 PyQtWebEngine --break-system-packages && \
     apt-get remove -y build-essential python3.11-dev libffi-dev libssl-dev libgmp-dev pkg-config \
-    libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev && \
+    libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev libgl1-mesa-glx libegl1-mesa && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
