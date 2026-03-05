@@ -1,18 +1,15 @@
 # Use official Node.js LTS image
 FROM node:18-slim
 
-# Install ffmpeg (and wget if needed for other purposes)
-RUN apt-get update && \
-    apt-get install -y ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install system and Python build dependencies for yt-dlp[tiktok]
+# Install all system, Python, and build dependencies in one step
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
         python3 \
         python3-pip \
+        python3-setuptools \
         python3-wheel \
+        ca-certificates \
         build-essential \
         python3-dev \
         libffi-dev \
@@ -24,16 +21,9 @@ RUN apt-get update && \
         libxslt1-dev \
         zlib1g-dev \
         libbrotli-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip separately
-RUN pip3 install --upgrade pip
-
-# Install yt-dlp with TikTok dependencies separately for easier debugging
-RUN pip3 install 'yt-dlp[tiktok]'
-
-# Remove build dependencies after yt-dlp install
-RUN apt-get remove -y build-essential python3-dev libffi-dev libssl-dev pkg-config libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev python3-wheel && \
+    pip3 install --upgrade pip && \
+    pip3 install 'yt-dlp[tiktok]' && \
+    apt-get remove -y build-essential python3-dev libffi-dev libssl-dev pkg-config libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev python3-wheel python3-setuptools && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
