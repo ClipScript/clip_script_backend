@@ -6,12 +6,27 @@ RUN apt-get update && \
     apt-get install -y ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
-# Install build dependencies for yt-dlp[tiktok] and clean up after
+# Install system and Python build dependencies for yt-dlp[tiktok]
 RUN apt-get update && \
-    apt-get install -y ffmpeg python3 python3-pip build-essential python3-dev libffi-dev libssl-dev && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        python3 \
+        python3-pip \
+        python3-wheel \
+        build-essential \
+        python3-dev \
+        libffi-dev \
+        libssl-dev \
+        pkg-config \
+        libc-dev \
+        libc6-dev \
+        libxml2-dev \
+        libxslt1-dev \
+        zlib1g-dev \
+        libbrotli-dev && \
     pip3 install --upgrade pip && \
     pip3 install 'yt-dlp[tiktok]' && \
-    apt-get remove -y build-essential python3-dev libffi-dev libssl-dev && \
+    apt-get remove -y build-essential python3-dev libffi-dev libssl-dev pkg-config libc-dev libc6-dev libxml2-dev libxslt1-dev zlib1g-dev libbrotli-dev python3-wheel && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
