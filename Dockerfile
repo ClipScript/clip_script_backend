@@ -40,6 +40,8 @@ RUN pip install wheel setuptools
 RUN pip install curl-cffi
 RUN pip install 'yt-dlp[default]'
 
+RUN pip install bgutil-ytdlp-pot-provider
+
 # Symlink yt-dlp so it's available system-wide
 RUN ln -sf /opt/venv/bin/yt-dlp /usr/local/bin/yt-dlp
 

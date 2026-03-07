@@ -44,12 +44,13 @@ export class TranscriptionProcessor {
         const proxyUrl = process.env.PROXY_URL; // Optional: set in .env if your server IP is blocked
         const youtubeFlags = isYouTube
             ? [
-                '--extractor-args "youtube:player_client=ios"', // CHANGED: bypasses n-challenge + bot detection
-                '--retries 5',                                   // CHANGED: added retries
-                '--retry-sleep exp=2:30',                        // CHANGED: exponential backoff on retry
-                '--sleep-requests 3',                            // CHANGED: increased from 2
-                '--sleep-interval 8',                            // CHANGED: increased from 5
-                '--max-sleep-interval 20',                       // CHANGED: increased from 10
+                '--extractor-args "youtube:player_client=web"',
+                '--compat-options no-youtube-unavailable-videos',
+                '--retries 5',
+                '--retry-sleep exp=2:30',
+                '--sleep-requests 3',
+                '--sleep-interval 8',
+                '--max-sleep-interval 20',
                 proxyUrl ? `--proxy "${proxyUrl}"` : ''
             ].filter(Boolean).join(' ')
             : '';
@@ -95,7 +96,7 @@ export class TranscriptionProcessor {
         this.logger.log(`Audio will be saved to: ${audioPath}`);
         let ytDlpAudioCmd: string;
         if (isYouTube) {
-            ytDlpAudioCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -x --audio-format mp3 -o "/app/tmp/%(id)s.mp3" "${videoUrl}"`;
+            ytDlpAudioCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`;
         } else {
             ytDlpAudioCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
         }
