@@ -44,11 +44,13 @@ export class TranscriptionProcessor {
         const proxyUrl = process.env.PROXY_URL; // Optional: set in .env if your server IP is blocked
         const youtubeFlags = isYouTube
             ? [
-                '--add-header "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
-                '--sleep-requests 2',
-                '--sleep-interval 5',
-                '--max-sleep-interval 10',
-                proxyUrl ? `--proxy \"${proxyUrl}\"` : ''
+                '--extractor-args "youtube:player_client=ios"', // CHANGED: bypasses n-challenge + bot detection
+                '--retries 5',                                   // CHANGED: added retries
+                '--retry-sleep exp=2:30',                        // CHANGED: exponential backoff on retry
+                '--sleep-requests 3',                            // CHANGED: increased from 2
+                '--sleep-interval 8',                            // CHANGED: increased from 5
+                '--max-sleep-interval 20',                       // CHANGED: increased from 10
+                proxyUrl ? `--proxy "${proxyUrl}"` : ''
             ].filter(Boolean).join(' ')
             : '';
 
