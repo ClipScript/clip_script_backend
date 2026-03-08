@@ -39,7 +39,7 @@ RUN rustc --version && cargo --version
 RUN pip install wheel setuptools
 RUN pip install curl-cffi
 RUN pip install --upgrade 'yt-dlp[default]'
-RUN pip install yt-dlp-n-sig
+RUN pip install git+https://github.com/yt-dlp/n-sig
 
 
 RUN pip install bgutil-ytdlp-pot-provider
