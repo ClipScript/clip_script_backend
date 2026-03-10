@@ -147,7 +147,7 @@ export class TranscriptionProcessor {
             this.logger.log('Submitting transcript job with:', { audio_url: audioUrl, utterances: true });
             const transcriptRes = await axios.post(
                 'https://api.assemblyai.com/v2/transcript',
-                { audio_url: audioUrl, speech_models: ["universal-3-pro"], language_detection: true, },
+                { audio_url: audioUrl, speech_models: ["universal-3-pro", "universal-2"], language_detection: true, },
                 { headers: { authorization: apiKey } }
             );
             this.logger.log('AssemblyAI transcript response:', transcriptRes.data);
