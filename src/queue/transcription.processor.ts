@@ -5,213 +5,203 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from '@nestjs/common';
 import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 
 @Processor('transcription')
 export class TranscriptionProcessor {
     private readonly logger = new Logger(TranscriptionProcessor.name);
 
+    private get ytDlpPath(): string {
+        return process.platform === 'win32'
+            ? path.join(__dirname, '../../bin/yt-dlp.exe')
+            : '/usr/local/bin/yt-dlp';
+    }
+
+    private get cookiesPath(): string {
+        return process.platform === 'win32'
+            ? path.join(__dirname, '../../cookies.txt')
+            : '/app/cookies.txt';
+    }
+
+    private async runCommand(cmd: string, timeoutMs = 120_000): Promise<string> {
+        try {
+            const { stdout, stderr } = await execAsync(cmd, { timeout: timeoutMs });
+            if (stderr) this.logger.warn(`stderr: ${stderr}`);
+            return stdout;
+        } catch (err) {
+            throw new Error(err.message || String(err));
+        }
+    }
+
+    private buildTikTokFlags(): string {
+        return [
+            '--impersonate chrome',
+            '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"',
+            '--add-header "Referer:https://www.tiktok.com/"',
+            '--add-header "Accept-Language:en-US,en;q=0.9"',
+        ].join(' ');
+    }
+
+    private buildYouTubeFlags(): string {
+        const proxyUrl = process.env.PROXY_URL;
+        return [
+            '--extractor-args "youtube:player_client=web,android"',
+            '--compat-options no-youtube-unavailable-videos',
+            '--retries 5',
+            '--retry-sleep exp=2:30',
+            '--sleep-requests 2',
+            '--sleep-interval 5',
+            '--max-sleep-interval 15',
+            proxyUrl ? `--proxy "${proxyUrl}"` : '',
+        ].filter(Boolean).join(' ');
+    }
+
     @Process('process-video')
     async handleTranscription(job: Job) {
         const { videoUrl } = job.data;
-        // Use absolute path for tmp directory
-        const tempDir = path.resolve(__dirname, '../../tmp');
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-            this.logger.log(`Created tmp directory at: ${tempDir}`);
-        } else {
-            this.logger.log(`Using tmp directory at: ${tempDir}`);
-        }
 
-        // Set cookies path based on OS
-        const cookiesPath = process.platform === 'win32'
-            ? path.join(__dirname, '../../cookies.txt')
-            : '/app/cookies.txt';
+        // --- Setup temp dir ---
+        const tempDir = path.resolve(__dirname, '../../tmp');
+        fs.mkdirSync(tempDir, { recursive: true });
+        this.logger.log(`Temp dir: ${tempDir}`);
 
         const isTikTok = videoUrl.includes('tiktok.com');
         const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
 
-        const tiktokFlags = isTikTok
-            ? [
-                '--impersonate chrome',
-                '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
-                '--add-header "Referer:https://www.tiktok.com/"',
-                '--extractor-args "tiktok:api_hostname=api22-normal-c-useast2a.tiktokv.com"'
-            ].join(' ')
-            : '';
+        const platformFlags = isTikTok
+            ? this.buildTikTokFlags()
+            : isYouTube
+                ? this.buildYouTubeFlags()
+                : '';
 
-        // YouTube-specific flags to handle bot detection and rate limiting
-        const proxyUrl = process.env.PROXY_URL; // Optional: set in .env if your server IP is blocked
-        const youtubeFlags = isYouTube
-            ? [
-                '--extractor-args "youtube:player_client=web"',
-                '--compat-options no-youtube-unavailable-videos',
-                '--retries 5',
-                '--retry-sleep exp=2:30',
-                '--sleep-requests 3',
-                '--sleep-interval 8',
-                '--max-sleep-interval 20',
-                proxyUrl ? `--proxy "${proxyUrl}"` : ''
-            ].filter(Boolean).join(' ')
-            : '';
-
-        const platformFlags = isTikTok ? tiktokFlags : isYouTube ? youtubeFlags : '';
-
-        // 1. Download original video using yt-dlp (best quality)
-        const videoPath = path.join(tempDir, `${job.id}.mp4`);
-        this.logger.log(`Video will be saved to: ${videoPath}`);
-        const ytDlpPath = process.platform === 'win32'
-            ? path.join(__dirname, '../../bin/yt-dlp.exe')
-            : '/usr/local/bin/yt-dlp';
-        const ytDlpVideoCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -f "bv*+ba/b" -o "${videoPath}" "${videoUrl}"`;
-        this.logger.log(`yt-dlp video command: ${ytDlpVideoCmd}`);
-        try {
-            await new Promise((resolve, reject) => {
-                exec(ytDlpVideoCmd, (error, stdout, stderr) => {
-                    this.logger.log('yt-dlp video stdout:', stdout);
-                    this.logger.log('yt-dlp video stderr:', stderr);
-                    if (error) {
-                        this.logger.error(`yt-dlp video error: ${error.message}`);
-                        reject(error);
-                    } else {
-                        this.logger.log('yt-dlp video download complete');
-                        resolve(true);
-                    }
-                });
-            });
-            // Check if video file exists after yt-dlp completes
-            if (fs.existsSync(videoPath)) {
-                this.logger.log(`Video file exists after yt-dlp: ${videoPath}`);
-            } else {
-                this.logger.warn(`Video file does NOT exist after yt-dlp: ${videoPath}`);
-            }
-        } catch (err) {
-            this.logger.error('Failed to download video with yt-dlp', err);
-            this.logger.warn(`Video download failed for jobId ${job.id}. Video will not be available for download.`);
-            // Continue processing so transcription can still work
-        }
-
-        // 2. Download audio using yt-dlp and ffmpeg (Linux-compatible)
+        const base = `${this.ytDlpPath} ${platformFlags} --cookies "${this.cookiesPath}"`;
         const audioPath = path.join(tempDir, `${job.id}.mp3`);
-        this.logger.log(`Audio will be saved to: ${audioPath}`);
-        let ytDlpAudioCmd: string;
-        if (isYouTube) {
-            ytDlpAudioCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`;
-        } else {
-            ytDlpAudioCmd = `${ytDlpPath} ${platformFlags} --cookies "${cookiesPath}" -x --audio-format mp3 --keep-video -o "${audioPath}" "${videoUrl}"`;
-        }
-        this.logger.log(`yt-dlp command: ${ytDlpAudioCmd}`);
-        try {
-            await new Promise((resolve, reject) => {
-                exec(ytDlpAudioCmd, (error, stdout, stderr) => {
-                    this.logger.log('yt-dlp stdout:', stdout);
-                    this.logger.log('yt-dlp stderr:', stderr);
-                    if (error) {
-                        this.logger.error(`yt-dlp error: ${error.message}`);
-                        reject(error);
-                    } else {
-                        this.logger.log('yt-dlp audio download complete');
-                        resolve(true);
-                    }
-                });
-            });
-        } catch (err) {
-            this.logger.error('Failed to download audio with yt-dlp', err);
-            throw new Error('Audio download failed');
+
+        // ─── 1. Download Audio Only ──────────────────────────────────────────
+        this.logger.log(`Downloading audio only → ${audioPath}`);
+
+        const audioStrategies = isTikTok
+            ? [
+                // Strategy 1: standard audio extraction
+                `${base} -x --audio-format mp3 --audio-quality 0 -o "${audioPath}" "${videoUrl}"`,
+                // Strategy 2: drop impersonation, rely only on cookies
+                `${this.ytDlpPath} --cookies "${this.cookiesPath}" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
+                // Strategy 3: no cookies, no flags — last resort
+                `${this.ytDlpPath} -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
+            ]
+            : [
+                `${base} -x --audio-format mp3 --audio-quality 0 -o "${audioPath}" "${videoUrl}"`,
+                `${base} -f "ba/b" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
+            ];
+
+        let lastError: Error | null = null;
+        for (let i = 0; i < audioStrategies.length; i++) {
+            this.logger.log(`Audio download — attempt ${i + 1}/${audioStrategies.length}`);
+            try {
+                await this.runCommand(audioStrategies[i]);
+                this.logger.log(`Audio download succeeded on attempt ${i + 1}`);
+                break;
+            } catch (err) {
+                lastError = err;
+                this.logger.warn(`Audio download attempt ${i + 1} failed: ${err.message}`);
+                if (i === audioStrategies.length - 1) {
+                    throw lastError ?? new Error('Audio download failed after all attempts');
+                }
+            }
         }
 
-        // 3. Send audio to AssemblyAI (or other provider)
-        const apiKey = process.env.ASSEMBLYAI_API_KEY;
-        if (!apiKey) {
-            this.logger.error('Missing AssemblyAI API key');
-            throw new Error('Missing AssemblyAI API key');
+        if (!fs.existsSync(audioPath)) {
+            throw new Error(`Audio file missing after download: ${audioPath}`);
         }
+
+        // ─── 2. Upload to AssemblyAI ─────────────────────────────────────────
+        const apiKey = process.env.ASSEMBLYAI_API_KEY;
+        if (!apiKey) throw new Error('Missing ASSEMBLYAI_API_KEY');
+
         let audioUrl: string;
         try {
-            const audioData = fs.createReadStream(audioPath);
             const uploadRes = await axios.post(
                 'https://api.assemblyai.com/v2/upload',
-                audioData,
+                fs.createReadStream(audioPath),
                 { headers: { authorization: apiKey, 'transfer-encoding': 'chunked' } }
             );
-            this.logger.log('AssemblyAI upload response:', uploadRes.data);
+            this.logger.log(`Audio upload response: ${JSON.stringify(uploadRes.data)}`);
             audioUrl = uploadRes.data.upload_url;
-            this.logger.log('Audio uploaded to AssemblyAI');
+            this.logger.log(`Audio uploaded: ${audioUrl}`);
         } catch (err) {
-            this.logger.error('Failed to upload audio to AssemblyAI', err.response?.data || err);
-            throw new Error('Audio upload failed');
+            throw new Error(`Audio upload failed: ${err.response?.data?.error ?? err.message}`);
         }
 
+        // ─── 3. Submit Transcript Job ────────────────────────────────────────
         let transcriptId: string;
         try {
-            this.logger.log('Submitting transcript job with:', { audio_url: audioUrl, utterances: true });
             const transcriptRes = await axios.post(
                 'https://api.assemblyai.com/v2/transcript',
-                { audio_url: audioUrl, speech_models: ["universal-3-pro", "universal-2"], language_detection: true, },
+                {
+                    audio_url: audioUrl,
+                    language_detection: "en",
+                    speech_models: ["universal-3-pro", "universal-2"],
+                },
                 { headers: { authorization: apiKey } }
             );
-            this.logger.log('AssemblyAI transcript response:', transcriptRes.data);
             transcriptId = transcriptRes.data.id;
             this.logger.log(`Transcript job submitted: ${transcriptId}`);
         } catch (err) {
-            this.logger.error('Failed to submit transcript job', err.response?.data || err);
-            throw new Error('Transcript job submission failed');
+            throw new Error(`Transcript submission failed: ${err.response?.data?.error ?? err.message}`);
         }
 
-        // 4. Poll for transcript completion
+        // ─── 4. Poll for Completion ──────────────────────────────────────────
         let transcriptText = '';
-        let transcriptUtterances = [];
         let transcriptSentences = [];
 
-        try {
-            while (true) {
-                const statusRes = await axios.get(
-                    `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
-                    { headers: { authorization: apiKey } }
-                );
-                if (statusRes.data.status === 'completed') {
-                    transcriptText = statusRes.data.text;
-                    // Fetch sentences from AssemblyAI
-                    try {
-                        const sentencesRes = await axios.get(
-                            `https://api.assemblyai.com/v2/transcript/${transcriptId}/sentences`,
-                            { headers: { authorization: apiKey } }
-                        );
-                        transcriptSentences = sentencesRes.data.sentences || [];
-                        break; // Exit loop after fetching sentences
-                    } catch (sentenceErr) {
-                        this.logger.error('Failed to fetch transcript sentences', sentenceErr.response?.data || sentenceErr);
-                    }
-                    // this.logger.log('Transcription completed');
-                    // return { text: transcriptText, utterances: transcriptUtterances, sentences: transcriptSentences };
+        const maxPolls = 120; // 6 minutes max (120 × 3s)
+        for (let i = 0; i < maxPolls; i++) {
+            const statusRes = await axios.get(
+                `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+                { headers: { authorization: apiKey } }
+            );
+
+            const { status, text, error } = statusRes.data;
+
+            this.logger.log(`Polling transcript status: ${status} (attempt ${i + 1}/${maxPolls})`);
+
+            if (status === 'completed') {
+                transcriptText = text;
+                try {
+                    const sentencesRes = await axios.get(
+                        `https://api.assemblyai.com/v2/transcript/${transcriptId}/sentences`,
+                        { headers: { authorization: apiKey } }
+                    );
+                    transcriptSentences = sentencesRes.data.sentences ?? [];
+                } catch (err) {
+                    this.logger.warn('Failed to fetch sentences, continuing without them');
                 }
-                if (statusRes.data.status === 'failed') {
-                    this.logger.error('Transcription failed', statusRes.data);
-                    throw new Error('Transcription failed');
-                }
-                await new Promise((r) => setTimeout(r, 5000));
+                break;
+            } else if (status === 'error') {
+                throw new Error(`AssemblyAI transcription error: ${error}`);
             }
-        } catch (err) {
-            this.logger.error('Error while polling for transcript', err);
-            throw new Error('Transcript polling failed');
+
+            await new Promise((r) => setTimeout(r, 3000));
         }
 
-        // 5. Clean up temp files
+        if (!transcriptText) {
+            this.logger.error('Transcription polling timed out or never completed.');
+            throw new Error('Transcription polling timed out or never completed.');
+        }
+
+        // ─── 5. Cleanup — delete audio ───────────────────────────────────────
         try {
             fs.unlinkSync(audioPath);
-            this.logger.log(`Audio file deleted: ${audioPath}`);
-            // Do NOT delete video file after processing, so downloads work on both development and production
-            // If you want to clean up old videos, implement a scheduled cleanup or manual deletion
-        } catch (err) {
-            this.logger.warn('Failed to clean up temp files', err);
+            this.logger.log(`Deleted audio: ${audioPath}`);
+        } catch {
+            this.logger.warn(`Could not delete audio file: ${audioPath}`);
         }
 
-        // Log existence of both files after cleanup
-        this.logger.log(`After cleanup: video exists? ${fs.existsSync(videoPath)}, audio exists? ${fs.existsSync(audioPath)}`);
-
-        // 6. Return transcript
-        // this.logger.log('Transcribed text:', transcriptText);
-        // this.logger.log('Transcribed utterances:', transcriptUtterances);
+        // ─── 6. Return transcript ────────────────────────────────────────────
+        this.logger.log(`Transcript text: ${transcriptText}`);
         return { returnvalue: transcriptText, utterances: transcriptSentences };
     }
 }

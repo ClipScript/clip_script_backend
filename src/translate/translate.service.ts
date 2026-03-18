@@ -58,6 +58,7 @@ export class TranscriptionService {
             throw new NotFoundException('Job not found');
         }
 
+
         const state = await job.getState();
         const progress = job.progress();
 

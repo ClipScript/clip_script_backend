@@ -12,13 +12,13 @@ export class Transcription extends Document {
     @Prop({ required: true })
     transcript: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index: true })
     ip: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index: true })
     jobId: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index: true })
     platform: string;
 
     @Prop({ required: true })
