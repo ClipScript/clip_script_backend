@@ -16,8 +16,8 @@ export class ProgressGateway {
         this.server.emit(`progress-${jobId}`, progress);
     }
 
-    sendCompleted(jobId: string, file: string) {
-        this.server.emit(`completed-${jobId}`, file);
+    sendCompleted(jobId: string, fileUrl: string) {
+        this.server.emit(`completed-${jobId}`, fileUrl);
     }
 
     sendError(jobId: string, error: string) {

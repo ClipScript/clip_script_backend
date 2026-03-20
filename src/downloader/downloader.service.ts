@@ -7,7 +7,10 @@ import { CreateTranscriptionDto } from '../translate/dto/create-translate.dto';
 export class DownloaderService {
     constructor(
         @InjectQueue('video-download') private readonly videoQueue: Queue,
+
     ) { }
+
+    private downloadsMap = new Map<string, string>();
 
     async downloadVideoOnly(dto: CreateTranscriptionDto) {
         const { videoUrl } = dto;
@@ -25,4 +28,16 @@ export class DownloaderService {
             jobId: job.id,
         };
     }
+
+     setFile(jobId: string, filePath: string) {
+    this.downloadsMap.set(jobId, filePath);
+  }
+
+  getFile(jobId: string) {
+    return this.downloadsMap.get(jobId);
+  }
+
+  removeFile(jobId: string) {
+    this.downloadsMap.delete(jobId);
+  }
 }

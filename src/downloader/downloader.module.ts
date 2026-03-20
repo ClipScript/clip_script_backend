@@ -14,5 +14,6 @@ import { ProgressGateway } from 'src/gateways/progress.gateway';
   ],
   controllers: [DownloaderController],
   providers: [DownloaderService, RecaptchaService, VideoProcessor, ProgressGateway],
+  exports: [DownloaderService],
 })
 export class DownloaderModule { }
