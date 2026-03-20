@@ -2,35 +2,18 @@
 import { Controller, Post, Body, Get, Param, UseGuards, BadRequestException } from '@nestjs/common';
 import { TranscriptionService } from './translate.service';
 import { CreateTranscriptionDto } from './dto/create-translate.dto';
-import axios from 'axios';
-import { ConfigService } from '@nestjs/config';
 import type { Response, Request } from 'express';
 import { Res, Req } from '@nestjs/common';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
+import { RecaptchaService } from '../common/recaptcha.service';
 
 @Controller('transcription')
 export class TranscriptionController {
     constructor(
         private readonly transcriptionService: TranscriptionService,
-        private readonly configService: ConfigService,
+        private readonly recaptchaService: RecaptchaService,
     ) { }
-
-    private async verifyRecaptcha(token: string): Promise<boolean> {
-        const secret = this.configService.get<string>('RECAPTCHA_SECRET');
-        if (!secret) throw new Error('reCAPTCHA secret not configured');
-        const response = await axios.post(
-            'https://www.google.com/recaptcha/api/siteverify',
-            null,
-            {
-                params: {
-                    secret,
-                    response: token,
-                },
-            },
-        );
-        return response.data.success;
-    }
 
     @Post()
     async createTranscription(@Body() dto: CreateTranscriptionDto) {
@@ -38,7 +21,7 @@ export class TranscriptionController {
         if (!dto.captchaToken) {
             throw new BadRequestException('CAPTCHA token is required');
         }
-        const captchaValid = await this.verifyRecaptcha(dto.captchaToken);
+        const captchaValid = await this.recaptchaService.verify(dto.captchaToken);
         console.log('the verification result', captchaValid)
         if (!captchaValid) {
             throw new BadRequestException('CAPTCHA verification failed');

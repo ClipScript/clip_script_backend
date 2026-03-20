@@ -6,17 +6,18 @@ import { TranscriptionProcessor } from '../queue/transcription.processor';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Transcription, TranscriptionSchema } from './schema/transcription.schema';
 import { TranscriptionRepository } from './transcription.repository';
+import { RecaptchaService } from '../common/recaptcha.service';
 
 @Module({
     imports: [
-        BullModule.registerQueue({
-            name: 'transcription',
-        }),
+        BullModule.registerQueue(
+            { name: 'transcription' },
+        ),
         MongooseModule.forFeature([
             { name: Transcription.name, schema: TranscriptionSchema },
         ]),
     ],
     controllers: [TranscriptionController],
-    providers: [TranscriptionService, TranscriptionProcessor, TranscriptionRepository],
+    providers: [TranscriptionService, TranscriptionProcessor, TranscriptionRepository, RecaptchaService],
 })
 export class TranslateModule { }

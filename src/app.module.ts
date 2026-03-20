@@ -6,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { MongooseModule } from '@nestjs/mongoose';
+import { DownloaderModule } from './downloader/downloader.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     }),
     MongooseModule.forRoot(process.env.MONGODB_URI || ''),
     TranslateModule,
+    DownloaderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
