@@ -7,7 +7,10 @@ import axios from 'axios';
 import { ProgressGateway } from 'src/gateways/progress.gateway';
 import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
-ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+// ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
 
 
 @Processor('transcription')
