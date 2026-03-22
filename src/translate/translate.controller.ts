@@ -16,17 +16,19 @@ export class TranscriptionController {
     ) { }
 
     @Post()
-    async createTranscription(@Body() dto: CreateTranscriptionDto) {
+    async createTranscription(@Body() dto: CreateTranscriptionDto, @Req() req: Request) {
         // CAPTCHA validation placeholder
         if (!dto.captchaToken) {
             throw new BadRequestException('CAPTCHA token is required');
         }
         const captchaValid = await this.recaptchaService.verify(dto.captchaToken);
-        console.log('the verification result', captchaValid)
         if (!captchaValid) {
             throw new BadRequestException('CAPTCHA verification failed');
         }
-        return this.transcriptionService.initiateTranscription(dto);
+        let ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+        if (Array.isArray(ip)) ip = ip[0];
+        console.log("the IP address", ip)
+        return this.transcriptionService.initiateTranscription(dto, ip);
     }
 
     @Get(':jobId/status')
@@ -34,10 +36,10 @@ export class TranscriptionController {
         return this.transcriptionService.getJobStatus(jobId);
     }
 
-    @Get(':jobId/result')
-    async getResult(@Param('jobId') jobId: string) {
-        return this.transcriptionService.getJobResult(jobId);
-    }
+    // @Get(':jobId/result')
+    // async getResult(@Param('jobId') jobId: string) {
+    //     return this.transcriptionService.getJobResult(jobId);
+    // }
 
     @Get('/recent')
     async getRecentTranscribesForIp() {

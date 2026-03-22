@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { TranscriptionService } from './translate.service';
 import { TranscriptionController } from './translate.controller';
-import { TranscriptionProcessor } from '../queue/transcription.processor';
+import { TranscribeProcessor } from 'src/queue/transcription.processor';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Transcription, TranscriptionSchema } from './schema/transcription.schema';
 import { TranscriptionRepository } from './transcription.repository';
 import { RecaptchaService } from '../common/recaptcha.service';
+import { ProgressGateway } from 'src/gateways/progress.gateway';
 
 @Module({
     imports: [
@@ -18,6 +19,6 @@ import { RecaptchaService } from '../common/recaptcha.service';
         ]),
     ],
     controllers: [TranscriptionController],
-    providers: [TranscriptionService, TranscriptionProcessor, TranscriptionRepository, RecaptchaService],
+    providers: [TranscriptionService, TranscribeProcessor, TranscriptionRepository, RecaptchaService, ProgressGateway],
 })
 export class TranslateModule { }

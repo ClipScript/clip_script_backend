@@ -1,207 +1,219 @@
 import { Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
-import axios from 'axios';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
+import ffmpeg from 'fluent-ffmpeg';
+import axios from 'axios';
+import { ProgressGateway } from 'src/gateways/progress.gateway';
+import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
 
 
 @Processor('transcription')
-export class TranscriptionProcessor {
-    private readonly logger = new Logger(TranscriptionProcessor.name);
+export class TranscribeProcessor {
+    private readonly logger = new Logger(TranscribeProcessor.name);
 
-    private get ytDlpPath(): string {
-        return process.platform === 'win32'
-            ? path.join(__dirname, '../../bin/yt-dlp.exe')
-            : '/usr/local/bin/yt-dlp';
-    }
+    constructor(
+        private gateway: ProgressGateway,
+        private transcriptionService: TranscriptionService,
 
-    private get cookiesPath(): string {
-        return process.platform === 'win32'
-            ? path.join(__dirname, '../../cookies.txt')
-            : '/app/cookies.txt';
-    }
+    ) { }
 
-    private async runCommand(cmd: string, timeoutMs = 120_000): Promise<string> {
-        try {
-            const { stdout, stderr } = await execAsync(cmd, { timeout: timeoutMs });
-            if (stderr) this.logger.warn(`stderr: ${stderr}`);
-            return stdout;
-        } catch (err) {
-            throw new Error(err.message || String(err));
-        }
-    }
-
-    private buildTikTokFlags(): string {
-        return [
-            '--impersonate chrome',
-            '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"',
-            '--add-header "Referer:https://www.tiktok.com/"',
-            '--add-header "Accept-Language:en-US,en;q=0.9"',
-        ].join(' ');
-    }
-
-    private buildYouTubeFlags(): string {
-        const proxyUrl = process.env.PROXY_URL;
-        return [
-            '--extractor-args "youtube:player_client=web,android"',
-            '--compat-options no-youtube-unavailable-videos',
-            '--retries 5',
-            '--retry-sleep exp=2:30',
-            '--sleep-requests 2',
-            '--sleep-interval 5',
-            '--max-sleep-interval 15',
-            proxyUrl ? `--proxy "${proxyUrl}"` : '',
-        ].filter(Boolean).join(' ');
-    }
-
-    @Process('process-video')
-    async handleTranscription(job: Job) {
+    @Process('transcribe-job')
+    async handle(job: Job) {
         const { videoUrl } = job.data;
+        const jobId = job.id.toString();
 
-        // --- Setup temp dir ---
-        const tempDir = path.resolve(__dirname, '../../tmp');
-        fs.mkdirSync(tempDir, { recursive: true });
-        this.logger.log(`Temp dir: ${tempDir}`);
-
-        const isTikTok = videoUrl.includes('tiktok.com');
-        const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-
-        const platformFlags = isTikTok
-            ? this.buildTikTokFlags()
-            : isYouTube
-                ? this.buildYouTubeFlags()
-                : '';
-
-        const base = `${this.ytDlpPath} ${platformFlags} --cookies "${this.cookiesPath}"`;
-        const audioPath = path.join(tempDir, `${job.id}.mp3`);
-
-        // ─── 1. Download Audio Only ──────────────────────────────────────────
-        this.logger.log(`Downloading audio only → ${audioPath}`);
-
-        const audioStrategies = isTikTok
-            ? [
-                // Strategy 1: standard audio extraction
-                `${base} -x --audio-format mp3 --audio-quality 0 -o "${audioPath}" "${videoUrl}"`,
-                // Strategy 2: drop impersonation, rely only on cookies
-                `${this.ytDlpPath} --cookies "${this.cookiesPath}" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
-                // Strategy 3: no cookies, no flags — last resort
-                `${this.ytDlpPath} -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
-            ]
-            : [
-                `${base} -x --audio-format mp3 --audio-quality 0 -o "${audioPath}" "${videoUrl}"`,
-                `${base} -f "ba/b" -x --audio-format mp3 -o "${audioPath}" "${videoUrl}"`,
-            ];
-
-        let lastError: Error | null = null;
-        for (let i = 0; i < audioStrategies.length; i++) {
-            this.logger.log(`Audio download — attempt ${i + 1}/${audioStrategies.length}`);
-            try {
-                await this.runCommand(audioStrategies[i]);
-                this.logger.log(`Audio download succeeded on attempt ${i + 1}`);
-                break;
-            } catch (err) {
-                lastError = err;
-                this.logger.warn(`Audio download attempt ${i + 1} failed: ${err.message}`);
-                if (i === audioStrategies.length - 1) {
-                    throw lastError ?? new Error('Audio download failed after all attempts');
-                }
-            }
-        }
-
-        if (!fs.existsSync(audioPath)) {
-            throw new Error(`Audio file missing after download: ${audioPath}`);
-        }
-
-        // ─── 2. Upload to AssemblyAI ─────────────────────────────────────────
-        const apiKey = process.env.ASSEMBLYAI_API_KEY;
-        if (!apiKey) throw new Error('Missing ASSEMBLYAI_API_KEY');
-
-        let audioUrl: string;
         try {
-            const uploadRes = await axios.post(
+            this.gateway.sendProgress(jobId, 10, 'transcribe'); // started
+
+            const videoPath = await this.downloadVideo(videoUrl, jobId);
+            this.gateway.sendProgress(jobId, 30, 'transcribe');
+
+            const audioPath = await this.extractAudio(videoPath, jobId);
+            this.gateway.sendProgress(jobId, 50, 'transcribe');
+
+
+            const transcript = await this.transcribeAudio(audioPath);
+            this.gateway.sendProgress(jobId, 80, 'transcribe');
+
+            const saveData = await this.transcriptionService.saveResult(job, transcript);
+            console.log('Saved transcription data to DB:', saveData);
+            this.gateway.sendProgress(jobId, 95, 'transcribe');
+
+            this.gateway.sendCompleted(jobId, transcript, 'transcribe');
+
+            fs.unlinkSync(videoPath);
+            fs.unlinkSync(audioPath);
+
+            return transcript;
+        } catch (err) {
+            this.logger.error(`[${jobId}] Transcription failed: ${err.message}`, err.stack);
+            this.gateway.sendError(jobId, 'Transcription failed', 'transcribe');
+            throw err;
+        }
+    }
+
+    async downloadVideo(url: string, jobId: string): Promise<string> {
+        this.logger.log(`[${jobId}] Starting video download...`);
+        return new Promise((resolve, reject) => {
+            const output = `downloads/${jobId}.mp4`;
+
+            const process = spawn('yt-dlp', [
+                '-o', output,
+                '--no-playlist',
+                url,
+            ]);
+
+            process.on('close', (code) => {
+                if (code === 0) {
+                    this.logger.log(`[${jobId}] Video download finished`);
+                    resolve(output);
+                } else {
+                    this.logger.error(`[${jobId}] Video download failed with code ${code}`);
+                    reject('Download failed');
+                }
+            });
+            process.on('error', (err) => {
+                this.logger.error(`[${jobId}] Error spawning yt-dlp: ${err.message}`);
+                reject(err);
+            });
+        });
+    }
+
+    async extractAudio(videoPath: string, jobId: string): Promise<string> {
+        this.logger.log(`[${jobId}] Extracting audio from video...`);
+        return new Promise((resolve, reject) => {
+            const audioPath = `downloads/${jobId}.mp3`;
+
+            ffmpeg(videoPath)
+                .noVideo()
+                .audioCodec('libmp3lame')
+                .save(audioPath)
+                .on('end', () => {
+                    this.logger.log(`[${jobId}] Audio extraction finished`);
+                    resolve(audioPath);
+                })
+                .on('error', (err) => {
+                    this.logger.error(`[${jobId}] Audio extraction failed: ${err.message}`);
+                    reject(err);
+                });
+        });
+    }
+
+    async transcribeAudio(audioPath: string) {
+        this.logger.log(`Uploading audio for transcription...`);
+        const uploadUrl = await this.upload(audioPath);
+        this.logger.log(`Audio uploaded: ${uploadUrl}`);
+
+        this.logger.log(`Requesting transcript...`);
+        const id = await this.requestTranscript(uploadUrl);
+        this.logger.log(`Transcript requested, id: ${id}`);
+
+        const result = await this.pollTranscript(id);
+
+        const sentences = await this.getSentences(id);
+
+        return {
+            transcript: result.transcript,
+            utterances: sentences,
+        };
+    }
+
+    async upload(audioPath: string) {
+        try {
+            const res = await axios.post(
                 'https://api.assemblyai.com/v2/upload',
                 fs.createReadStream(audioPath),
-                { headers: { authorization: apiKey, 'transfer-encoding': 'chunked' } }
+                {
+                    headers: {
+                        authorization: process.env.ASSEMBLYAI_API_KEY,
+                    },
+                }
             );
-            this.logger.log(`Audio upload response: ${JSON.stringify(uploadRes.data)}`);
-            audioUrl = uploadRes.data.upload_url;
-            this.logger.log(`Audio uploaded: ${audioUrl}`);
+            this.logger.log(`Audio uploaded to AssemblyAI`);
+            return res.data.upload_url;
         } catch (err) {
-            throw new Error(`Audio upload failed: ${err.response?.data?.error ?? err.message}`);
+            this.logger.error(`Audio upload failed: ${err.message}`);
+            throw err;
         }
+    }
 
-        // ─── 3. Submit Transcript Job ────────────────────────────────────────
-        let transcriptId: string;
+    async requestTranscript(uploadUrl: string) {
         try {
-            const transcriptRes = await axios.post(
+            const res = await axios.post(
                 'https://api.assemblyai.com/v2/transcript',
                 {
-                    audio_url: audioUrl,
+                    audio_url: uploadUrl,
                     language_detection: "en",
                     speech_models: ["universal-3-pro", "universal-2"],
+                    speaker_labels: true,
                 },
-                { headers: { authorization: apiKey } }
-            );
-            transcriptId = transcriptRes.data.id;
-            this.logger.log(`Transcript job submitted: ${transcriptId}`);
-        } catch (err) {
-            throw new Error(`Transcript submission failed: ${err.response?.data?.error ?? err.message}`);
-        }
-
-        // ─── 4. Poll for Completion ──────────────────────────────────────────
-        let transcriptText = '';
-        let transcriptSentences = [];
-
-        const maxPolls = 120; // 6 minutes max (120 × 3s)
-        for (let i = 0; i < maxPolls; i++) {
-            const statusRes = await axios.get(
-                `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
-                { headers: { authorization: apiKey } }
-            );
-
-            const { status, text, error } = statusRes.data;
-
-            this.logger.log(`Polling transcript status: ${status} (attempt ${i + 1}/${maxPolls})`);
-
-            if (status === 'completed') {
-                transcriptText = text;
-                try {
-                    const sentencesRes = await axios.get(
-                        `https://api.assemblyai.com/v2/transcript/${transcriptId}/sentences`,
-                        { headers: { authorization: apiKey } }
-                    );
-                    transcriptSentences = sentencesRes.data.sentences ?? [];
-                } catch (err) {
-                    this.logger.warn('Failed to fetch sentences, continuing without them');
+                {
+                    headers: {
+                        authorization: process.env.ASSEMBLYAI_API_KEY,
+                    },
                 }
-                break;
-            } else if (status === 'error') {
-                throw new Error(`AssemblyAI transcription error: ${error}`);
+            );
+            this.logger.log(`Transcript request sent to AssemblyAI`);
+            return res.data.id;
+        } catch (err) {
+            this.logger.error(`Transcript request failed: ${err.message}`);
+            throw err;
+        }
+    }
+
+    async pollTranscript(id: string) {
+        while (true) {
+            try {
+                const res = await axios.get(
+                    `https://api.assemblyai.com/v2/transcript/${id}`,
+                    {
+                        headers: {
+                            authorization: process.env.ASSEMBLYAI_API_KEY,
+                        },
+                    }
+                );
+
+                if (res.data.status === 'completed') {
+                    this.logger.log(`Transcription completed successfully`);
+                    return {
+                        transcript: res.data.text,
+                        transcriptId: id,
+                    };
+                }
+
+                if (res.data.status === 'error') {
+                    this.logger.error(`Transcription failed on AssemblyAI side`);
+                    throw new Error('Transcription failed');
+                }
+
+                this.logger.log(`Transcription status: ${res.data.status}, polling again in 3s...`);
+                await new Promise((r) => setTimeout(r, 3000));
+            } catch (err) {
+                this.logger.error(`Polling transcript failed: ${err.message}`);
+                throw err;
             }
-
-            await new Promise((r) => setTimeout(r, 3000));
         }
+    }
 
-        if (!transcriptText) {
-            this.logger.error('Transcription polling timed out or never completed.');
-            throw new Error('Transcription polling timed out or never completed.');
-        }
 
-        // ─── 5. Cleanup — delete audio ───────────────────────────────────────
+    async getSentences(transcriptId: string) {
         try {
-            fs.unlinkSync(audioPath);
-            this.logger.log(`Deleted audio: ${audioPath}`);
-        } catch {
-            this.logger.warn(`Could not delete audio file: ${audioPath}`);
-        }
+            const res = await axios.get(
+                `https://api.assemblyai.com/v2/transcript/${transcriptId}/sentences`,
+                {
+                    headers: {
+                        authorization: process.env.ASSEMBLYAI_API_KEY,
+                    },
+                }
+            );
 
-        // ─── 6. Return transcript ────────────────────────────────────────────
-        this.logger.log(`Transcript text: ${transcriptText}`);
-        return { returnvalue: transcriptText, utterances: transcriptSentences };
+            return res.data.sentences;
+        } catch (err) {
+            this.logger.error(`Fetching sentences failed: ${err.message}`);
+            throw err;
+        }
     }
 }

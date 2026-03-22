@@ -5,6 +5,7 @@ import type { Queue } from 'bull';
 import { CreateTranscriptionDto as CreateTranscriptionDto } from './dto/create-translate.dto';
 import { TranscriptionRepository } from './transcription.repository';
 import type { Request } from 'express';
+import type { Job } from 'bull';
 
 @Injectable()
 export class TranscriptionService {
@@ -14,7 +15,7 @@ export class TranscriptionService {
         @Inject('REQUEST') private readonly request: Request,
     ) { }
 
-    async initiateTranscription(dto: CreateTranscriptionDto) {
+    async initiateTranscription(dto: CreateTranscriptionDto, ip: string) {
         // Validate URL and platform
         const platform = this.detectPlatform(dto.videoUrl);
 
@@ -23,10 +24,11 @@ export class TranscriptionService {
         }
 
         // Add job to queue
-        const job = await this.transcriptionQueue.add('process-video', {
+        const job = await this.transcriptionQueue.add('transcribe-job', {
             videoUrl: dto.videoUrl,
             platform,
             captchaToken: dto.captchaToken,
+            ip,
         }, {
             attempts: 3,
             backoff: {
@@ -39,8 +41,7 @@ export class TranscriptionService {
 
         return {
             jobId: job.id,
-            status: 'processing',
-            message: 'Transcription initiated',
+            status: 'queued',
         };
     }
 
@@ -69,53 +70,38 @@ export class TranscriptionService {
         };
     }
 
-    async getJobResult(jobId: string) {
-        const job = await this.transcriptionQueue.getJob(jobId);
-        console.log('Fetched job:', job);
+    async saveResult(job: Job, transcript: { transcript: string, utterances?: any[] }) {
+        const jobId = String(job.id);
 
-        if (!job) {
-            throw new NotFoundException('Job not found');
-        }
-        const state = await job.getState();
+        console.log(`Saving result for job ${jobId}...`);
 
-        if (state !== 'completed') {
-            throw new BadRequestException('Job not completed yet');
-        }
-
-        // Save transcript to MongoDB with IP if not already saved
         let transcriptDoc = await this.transcriptionRepository.findByJobId(jobId);
-        if (!transcriptDoc) {
-            let ip = this.request.ip || this.request.headers['x-forwarded-for'] || 'unknown';
-            if (Array.isArray(ip)) ip = ip[0];
 
-            const platform = job.data?.platform
-            const videoUrl = job.data?.videoUrl
-            // Extract utterances from job.returnvalue
+        if (!transcriptDoc) {
+            const { ip, platform, videoUrl } = job.data;
+
             let utterances: any[] = [];
-            if (job.returnvalue && job.returnvalue.utterances && Array.isArray(job.returnvalue.utterances)) {
-                utterances = job.returnvalue.utterances.map(u => ({
-                    text: u.text,
-                    start: u.start,
-                    end: u.end,
+
+            // ✅ map sentences → utterances
+            if (transcript?.utterances && Array.isArray(transcript.utterances)) {
+                utterances = transcript.utterances.map((s: any) => ({
+                    text: s.text,
+                    start: s.start,
+                    end: s.end,
                 }));
             }
+
             transcriptDoc = await this.transcriptionRepository.create({
-                transcript: job.returnvalue?.returnvalue || job.returnvalue?.transcript || '',
+                transcript: transcript?.transcript || '',
                 ip,
-                jobId: String(job.id),
+                jobId,
                 platform,
                 videoUrl,
                 utterances,
             });
         }
-        return {
-            jobId: job.id,
-            transcript: job.returnvalue.returnvalue,
-            platform: job.data?.platform,
-            videoUrl: job.data?.videoUrl,
-            utterances: job.returnvalue.utterances,
-            status: 'completed',
-        };
+
+        return transcriptDoc;
     }
 
     async getRecentTranscribesForIp() {

@@ -12,15 +12,15 @@ export class ProgressGateway {
     server: Server;
 
 
-    sendProgress(jobId: string, progress: number) {
-        this.server.emit(`progress-${jobId}`, progress);
+    sendProgress(jobId: string, progress: number, type: 'download' | 'transcribe') {
+        this.server.emit(`progress-${type}-${jobId}`, progress);
     }
 
-    sendCompleted(jobId: string, fileUrl: string) {
-        this.server.emit(`completed-${jobId}`, fileUrl);
+    sendCompleted(jobId: string, data: any, type: 'download' | 'transcribe') {
+        this.server.emit(`completed-${type}-${jobId}`, data);
     }
 
-    sendError(jobId: string, error: string) {
-        this.server.emit(`error-${jobId}`, error);
+    sendError(jobId: string, message: string, type: 'download' | 'transcribe') {
+        this.server.emit(`error-${type}-${jobId}`, message);
     }
 }
