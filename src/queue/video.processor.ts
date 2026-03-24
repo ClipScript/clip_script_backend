@@ -29,13 +29,45 @@ export class VideoProcessor {
             // ✅ Use jobId as filename (production-safe)
             const outputPath = `downloads/${jobId}.%(ext)s`;
 
+            // const process = spawn('yt-dlp', [
+            //     '-o',
+            //     outputPath,
+            //     videoUrl,
+            // ]);
+
             const process = spawn('yt-dlp', [
                 '-o',
                 outputPath,
+                '--merge-output-format', 'mp4',
+                '--no-playlist',
+
+                // '--proxy', proxy,
+
+                '-f', 'bestvideo+bestaudio/best',
+
+                // 🚀 SPEED BOOST
+                '--concurrent-fragments', '5',
+
+                //  THROTTLE BYPASS
+                '--throttled-rate', '100K',
+
+                '--user-agent',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+
+                '--add-header', 'Accept-Language:en-US,en;q=0.9',
+                '--add-header', 'Referer:https://www.tiktok.com/',
+                '--add-header', 'Accept:text/html,application/xhtml+xml',
+                '--add-header', 'Connection:keep-alive',
+
+                '--cookies', 'cookies.txt',
+
+                '--no-check-certificate',
+                '--restrict-filenames',
+
                 videoUrl,
             ]);
 
-            let finalFilePath: string | null = null;
+
 
             process.stdout.on('data', (data) => {
                 const message = data.toString();
@@ -48,11 +80,7 @@ export class VideoProcessor {
                     this.gateway.sendProgress(jobId, progress, 'download');
                 }
 
-                // ✅ Extract destination file
-                const destMatch = message.match(/Destination:\s(.+)/);
-                if (destMatch) {
-                    finalFilePath = destMatch[1].trim();
-                }
+
             });
 
             process.stderr.on('data', (data) => {
@@ -60,7 +88,8 @@ export class VideoProcessor {
             });
 
             process.on('close', (code) => {
-                if (code === 0 && finalFilePath) {
+                const finalFilePath = `downloads/${jobId}.mp4`;
+                if (code === 0 && fs.existsSync(finalFilePath)) {
                     // ✅ store file
                     this.downloaderService.setFile(jobId, finalFilePath);
 

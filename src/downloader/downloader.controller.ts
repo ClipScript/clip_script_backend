@@ -28,9 +28,11 @@ export class DownloaderController {
     }
 
 
-    @Get('/download/:jobId')
+    @Get('download/:jobId')
     async downloadFile(@Param('jobId') jobId: string, @Res() res: Response) {
         const filePath = this.downloaderService.getFile(jobId);
+
+        console.log('Download request:', { jobId, filePath, exists: filePath && fs.existsSync(filePath) });
 
         if (!filePath || !fs.existsSync(filePath)) {
             throw new NotFoundException('File not found');
