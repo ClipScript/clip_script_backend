@@ -44,7 +44,7 @@ export class TranscribeProcessor {
         if (platform === 'youtube') {
             return [
                 ...baseArgs,
-                '--cookies', 'cookies.txt',
+                // '--cookies', 'cookies.txt',
                 url,
             ];
         }
