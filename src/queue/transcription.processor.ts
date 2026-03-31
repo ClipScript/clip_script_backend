@@ -13,6 +13,7 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
 
 
+
 @Processor('transcription')
 export class TranscribeProcessor {
     private readonly logger = new Logger(TranscribeProcessor.name);
@@ -22,6 +23,7 @@ export class TranscribeProcessor {
         private transcriptionService: TranscriptionService,
 
     ) { }
+
 
     private getPlatform(url: string) {
         if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
@@ -33,18 +35,32 @@ export class TranscribeProcessor {
     private buildYtDlpArgs(url: string, output: string) {
         const platform = this.getPlatform(url);
 
+        const proxy = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+
+        console.log(`Using proxy: ${proxy}`);
+
         const baseArgs = [
             '-o', output,
             '--no-playlist',
             '-f', 'bestaudio/best',
             '--extract-audio',
             '--audio-format', 'mp3',
+            // '--proxy', proxy,
+
+            // 🚀 SPEED BOOST
+            '--concurrent-fragments', '5',
+            '--throttled-rate', '100K',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+
         ];
 
         if (platform === 'youtube') {
             return [
                 ...baseArgs,
                 // '--cookies', 'cookies.txt',
+                '--no-check-certificate',
+                '--force-ipv4',
+                '--js-runtimes', 'node',
                 url,
             ];
         }
@@ -52,8 +68,9 @@ export class TranscribeProcessor {
         if (platform === 'tiktok') {
             return [
                 ...baseArgs,
+                '--proxy', proxy,
+                '--force-ipv4',
                 '--add-header', 'Referer:https://www.tiktok.com/',
-                '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 url
             ];
         }
@@ -61,9 +78,10 @@ export class TranscribeProcessor {
         if (platform === 'instagram') {
             return [
                 ...baseArgs,
-                '--cookies', 'cookies.txt',
+                // '--cookies', 'cookies.txt',
+                '--proxy', proxy,
+                '--force-ipv4',
                 '--add-header', 'Referer:https://www.instagram.com/',
-                '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 url,
             ];
         }
@@ -87,7 +105,7 @@ export class TranscribeProcessor {
             // this.gateway.sendProgress(jobId, 50, 'transcribe');
 
             const audioPath = await this.downloadAudio(videoUrl, jobId);
-            this.gateway.sendProgress(jobId, 50, 'transcribe');
+            this.gateway.sendProgress(jobId, 30, 'transcribe');
 
 
             const transcript = await this.transcribeAudio(audioPath);

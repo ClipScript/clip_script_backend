@@ -7,8 +7,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   const frontendUrl = process.env.FRONTEND_URL || 'https://tiktok-transcribe-frontend.vercel.app';
   const devUrl = 'http://localhost:3000';
+  const subDomain = "https://useclipscript.com"
   app.enableCors({
-    origin: [frontendUrl, devUrl],
+    origin: [frontendUrl, devUrl, subDomain],
     credentials: true,
   });
   // Set up the Socket.IO adapter
