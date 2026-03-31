@@ -37,8 +37,6 @@ export class TranscribeProcessor {
 
         const proxy = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
 
-        console.log(`Using proxy: ${proxy}`);
-
         const baseArgs = [
             '-o', output,
             '--no-playlist',
@@ -57,9 +55,7 @@ export class TranscribeProcessor {
         if (platform === 'youtube') {
             return [
                 ...baseArgs,
-                '--cookies', 'cookies.txt',
-                '--no-check-certificate',
-                '--force-ipv4',
+                // '--cookies', 'cookies.txt',
                 '--js-runtimes', 'node',
                 url,
             ];
