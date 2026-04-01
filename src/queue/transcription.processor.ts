@@ -8,24 +8,18 @@ import { ProgressGateway } from 'src/gateways/progress.gateway';
 import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-
-import { execSync } from 'child_process';
-console.log('yt-dlp path:', execSync(process.platform === 'win32' ? 'where yt-dlp' : 'which yt-dlp').toString().trim());
-
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
-
-
 
 @Processor('transcription')
 export class TranscribeProcessor {
     private readonly logger = new Logger(TranscribeProcessor.name);
-
     constructor(
         private gateway: ProgressGateway,
         private transcriptionService: TranscriptionService,
-
-    ) { }
+    ) {
+        console.log('TranscribeProcessor constructed');
+    }
 
 
     private getPlatform(url: string) {
@@ -93,6 +87,7 @@ export class TranscribeProcessor {
 
     @Process('transcribe-job')
     async handle(job: Job) {
+        this.logger.log(`[${job.id}] Processor received job for URL: ${job.data.videoUrl}`);
         const { videoUrl } = job.data;
         const jobId = job.id.toString();
         this.logger.log(`[${jobId}] Starting transcription for URL: ${videoUrl}`);

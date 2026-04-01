@@ -7,13 +7,16 @@ import { TranscriptionRepository } from './transcription.repository';
 import type { Request } from 'express';
 import type { Job } from 'bull';
 
+
 @Injectable()
 export class TranscriptionService {
     constructor(
         @InjectQueue('transcription') private transcriptionQueue: Queue,
         private readonly transcriptionRepository: TranscriptionRepository,
         @Inject('REQUEST') private readonly request: Request,
-    ) { }
+    ) {
+
+    }
 
     async initiateTranscription(dto: CreateTranscriptionDto, ip: string) {
         // Validate URL and platform
@@ -25,13 +28,19 @@ export class TranscriptionService {
 
         // Add job to queue
         try {
-            const job = await this.transcriptionQueue.add({
+            const job = await this.transcriptionQueue.add('transcribe-job', {
                 videoUrl: dto.videoUrl,
-                ip,
                 platform,
+                captchaToken: dto.captchaToken,
+                ip,
             }, {
-                attempts: 2,
-                backoff: 5000, // 5 seconds
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 2000,
+                },
+                removeOnComplete: false,
+                removeOnFail: false,
             });
             return {
                 jobId: job.id,
