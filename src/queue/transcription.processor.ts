@@ -9,6 +9,9 @@ import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
+import { execSync } from 'child_process';
+console.log('yt-dlp path:', execSync(process.platform === 'win32' ? 'where yt-dlp' : 'which yt-dlp').toString().trim());
+
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
 
@@ -77,7 +80,7 @@ export class TranscribeProcessor {
         if (platform === 'instagram') {
             return [
                 ...baseArgs,
-                // '--cookies', 'cookies.txt',
+                '--cookies', 'cookies.txt',
                 '--proxy', proxy,
                 '--force-ipv4',
                 '--add-header', 'Referer:https://www.instagram.com/',

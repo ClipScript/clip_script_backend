@@ -27,7 +27,6 @@ export class TranscriptionController {
         }
         let ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
         if (Array.isArray(ip)) ip = ip[0];
-        console.log("the IP address", ip)
         return this.transcriptionService.initiateTranscription(dto, ip);
     }
 

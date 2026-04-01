@@ -15,6 +15,7 @@ RUN apt-get update && \
     git \
     libcurl4-openssl-dev \
     openssl && \
+    update-ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Deno for yt-dlp JS runtime (YouTube extraction)

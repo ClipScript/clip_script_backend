@@ -24,25 +24,23 @@ export class TranscriptionService {
         }
 
         // Add job to queue
-        const job = await this.transcriptionQueue.add('transcribe-job', {
-            videoUrl: dto.videoUrl,
-            platform,
-            captchaToken: dto.captchaToken,
-            ip,
-        }, {
-            attempts: 3,
-            backoff: {
-                type: 'exponential',
-                delay: 2000,
-            },
-            removeOnComplete: false,
-            removeOnFail: false,
-        });
-
-        return {
-            jobId: job.id,
-            status: 'queued',
-        };
+        try {
+            const job = await this.transcriptionQueue.add({
+                videoUrl: dto.videoUrl,
+                ip,
+                platform,
+            }, {
+                attempts: 2,
+                backoff: 5000, // 5 seconds
+            });
+            return {
+                jobId: job.id,
+                status: 'queued',
+            };
+        } catch (error) {
+            console.error('Error adding job to queue:', error);
+            throw new BadRequestException('Failed to add job to queue');
+        }
     }
 
     private detectPlatform(url: string): string | null {
