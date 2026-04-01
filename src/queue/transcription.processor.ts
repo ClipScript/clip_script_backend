@@ -62,7 +62,7 @@ export class TranscribeProcessor {
             return [
                 ...baseArgs,
                 '--cookies', 'cookies.txt',
-                '--proxy', proxy,
+                // '--proxy', proxy,
                 '--force-ipv4',
                 '--add-header', 'Referer:https://www.tiktok.com/',
                 '--add-header', 'Origin:https://www.tiktok.com',
@@ -75,7 +75,7 @@ export class TranscribeProcessor {
             return [
                 ...baseArgs,
                 '--cookies', 'cookies.txt',
-                '--proxy', proxy,
+                // '--proxy', proxy,
                 '--force-ipv4',
                 '--add-header', 'Referer:https://www.instagram.com/',
                 url,
