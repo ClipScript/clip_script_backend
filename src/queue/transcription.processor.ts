@@ -64,9 +64,12 @@ export class TranscribeProcessor {
         if (platform === 'tiktok') {
             return [
                 ...baseArgs,
+                '--cookies', 'cookies.txt',
                 '--proxy', proxy,
                 '--force-ipv4',
                 '--add-header', 'Referer:https://www.tiktok.com/',
+                '--add-header', 'Origin:https://www.tiktok.com',
+                '--add-header', 'Accept-Language:en-US,en;q=0.9',
                 url
             ];
         }
