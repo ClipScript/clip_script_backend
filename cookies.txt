@@ -13,6 +13,7 @@
 .instagram.com	TRUE	/	TRUE	1806593495	sessionid	1985537168%3AyzSb2Nmid3MuB2%3A19%3AAYjMPYzfhHZuE4qPibgoX1XgNAOfbIpJU2hb5RMLNNE
 .instagram.com	TRUE	/	TRUE	1775662291	wd	1366x615
 .tiktok.com	TRUE	/	TRUE	1808737077	_ttp	2zHbwhShBqTrGQ93MzzPsea16hj
+.tiktok.com	TRUE	/	FALSE	1775063578	_wafchallengeid	eyJ2Ijp7ImEiOiIwV1Vkc1hnTmdKRzJHekk2K2FyclhKN3BDeU5XUy92UDBUdmdpcVpEQUljPSIsImIiOjE3NzUwNjM0NTgsImMiOiJBbEVqUjRXMm4xL1J3UENJVXkrY05td1k5RHRrWmJtWWVQaEVidGZhS01JPSJ9LCJzIjoiVVFRUnJ6SWNpa05ZWkZsQzRNc2NsVHRHOTh6S3B3aEZmL0xLOXA5MG9tWT0iLCJkIjoiTnpBPSJ9
 .tiktok.com	TRUE	/	TRUE	1776651869	cmpl_token	AgQYAPMF_hfkTtKxngvGUj7dPPMW96Ro3f-KjmChGQQ
 .tiktok.com	TRUE	/	TRUE	1803130921	cookie-consent	{%22optional%22:true%2C%22ga%22:true%2C%22af%22:true%2C%22fbp%22:true%2C%22lip%22:true%2C%22bing%22:true%2C%22ttads%22:true%2C%22reddit%22:true%2C%22hubspot%22:true%2C%22version%22:%22v10%22}
 .tiktok.com	TRUE	/	FALSE	1803003869	d_ticket	c67ef037f9cd26c59ce59d0f8b0da1d0e82a2
@@ -37,6 +38,7 @@
 .tiktok.com	TRUE	/	TRUE	1806596285	ttwid	1%7C_VO2P15uB51pQQj07Ycw95cJSgRf0a50PwgaBHpNvdU%7C1775060284%7Cc48b95bdca6873e4eac4167515843211be5c4e95963676ff271755dad8a9f8d3
 .tiktok.com	TRUE	/	TRUE	1787019869	uid_tt	c286cbd13dfc2ccdc89b5c33b2467480188326076c4a06bd006eab237991cd26
 .tiktok.com	TRUE	/	TRUE	1787019869	uid_tt_ss	c286cbd13dfc2ccdc89b5c33b2467480188326076c4a06bd006eab237991cd26
+.tiktok.com	TRUE	/	FALSE	1775063578	waforiginalreid	https://www.tiktok.com/
 .www.tiktok.com	TRUE	/	TRUE	1795354866	delay_guest_mode_vid	5
 .www.tiktok.com	TRUE	/	FALSE	0	passport_fe_beating_status	true
 .www.tiktok.com	TRUE	/	TRUE	1775665080	perf_feed_cache	{%22expireTimestamp%22:1775232000000%2C%22itemIds%22:[%227620781597821996290%22%2C%227612814567281888542%22%2C%227616251513144364304%22]}

@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DownloaderModule } from './downloader/downloader.module';
+import { CacheService } from './common/cache.service';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { DownloaderModule } from './downloader/downloader.module';
     DownloaderModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CacheService],
+  exports: [CacheService],
 })
 export class AppModule { }

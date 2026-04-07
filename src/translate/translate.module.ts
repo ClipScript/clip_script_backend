@@ -8,6 +8,7 @@ import { Transcription, TranscriptionSchema } from './schema/transcription.schem
 import { TranscriptionRepository } from './transcription.repository';
 import { RecaptchaService } from '../common/recaptcha.service';
 import { ProgressGateway } from 'src/gateways/progress.gateway';
+import { CacheService } from 'src/common/cache.service';
 
 @Module({
     imports: [
@@ -19,6 +20,6 @@ import { ProgressGateway } from 'src/gateways/progress.gateway';
         ]),
     ],
     controllers: [TranscriptionController],
-    providers: [TranscriptionService, TranscribeProcessor, TranscriptionRepository, RecaptchaService, ProgressGateway],
+    providers: [TranscriptionService, TranscribeProcessor, TranscriptionRepository, RecaptchaService, ProgressGateway, CacheService],
 })
 export class TranslateModule { }

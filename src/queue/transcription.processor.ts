@@ -8,6 +8,7 @@ import { ProgressGateway } from 'src/gateways/progress.gateway';
 import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import { CacheService } from 'src/common/cache.service';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
 
@@ -17,6 +18,7 @@ export class TranscribeProcessor {
     constructor(
         private gateway: ProgressGateway,
         private transcriptionService: TranscriptionService,
+        private cacheService: CacheService,
     ) {
         console.log('TranscribeProcessor constructed');
     }
@@ -92,6 +94,15 @@ export class TranscribeProcessor {
         const jobId = job.id.toString();
         this.logger.log(`[${jobId}] Starting transcription for URL: ${videoUrl}`);
 
+        // Caching logic
+        const cacheKey = `transcription:${videoUrl}`;
+        const cached = await this.cacheService.get(cacheKey);
+        if (cached) {
+            this.logger.log(`[${jobId}] Returning cached transcription`);
+            this.gateway.sendCompleted(jobId, cached, 'transcribe');
+            return cached;
+        }
+
         try {
             this.gateway.sendProgress(jobId, 10, 'transcribe'); // started
 
@@ -113,6 +124,9 @@ export class TranscribeProcessor {
             this.gateway.sendProgress(jobId, 95, 'transcribe');
 
             this.gateway.sendCompleted(jobId, transcript, 'transcribe');
+
+            // Cache the result
+            await this.cacheService.set(cacheKey, transcript);
 
             // fs.unlinkSync(videoPath);
             fs.unlinkSync(audioPath);
