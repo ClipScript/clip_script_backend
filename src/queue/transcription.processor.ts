@@ -9,8 +9,10 @@ import { TranscriptionService } from 'src/translate/translate.service';
 import { Logger } from '@nestjs/common';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { CacheService } from 'src/common/cache.service';
+import { CaptionExtractorService } from 'src/common/caption-extractor.service';
+import { TranscriptResult } from 'src/common/interfaces/transcript.interface';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-// ffmpeg.setFfmpegPath('C:\\ffmpeg\\bin\\ffmpeg.exe');
+
 
 @Processor('transcription')
 export class TranscribeProcessor {
@@ -19,8 +21,9 @@ export class TranscribeProcessor {
         private gateway: ProgressGateway,
         private transcriptionService: TranscriptionService,
         private cacheService: CacheService,
+        private captionExtractor: CaptionExtractorService, // Inject the new service
     ) {
-        console.log('TranscribeProcessor constructed');
+        this.logger.log('Worker started')
     }
 
 
@@ -106,12 +109,28 @@ export class TranscribeProcessor {
         try {
             this.gateway.sendProgress(jobId, 10, 'transcribe'); // started
 
-            // const videoPath = await this.downloadVideo(videoUrl, jobId);
-            // this.gateway.sendProgress(jobId, 30, 'transcribe');
+            // 1. Try to extract platform captions (fast path)
+            this.logger.log(`[${jobId}] Attempting to extract platform captions...`);
+            let transcriptResult: TranscriptResult | null = null;
+            try {
+                transcriptResult = await this.captionExtractor.extract(videoUrl);
+            } catch (captionErr) {
+                this.logger.warn(`[${jobId}] Caption extraction failed or unavailable: ${captionErr.message}`);
+            }
 
-            // const audioPath = await this.extractAudio(videoPath, jobId);
-            // this.gateway.sendProgress(jobId, 50, 'transcribe');
+            if (transcriptResult && transcriptResult.utterances && transcriptResult.utterances.length > 0) {
+                this.logger.log(`[${jobId}] Captions found, using platform captions as transcript.`);
+                this.gateway.sendProgress(jobId, 80, 'transcribe');
+                const saveData = await this.transcriptionService.saveResult(job, transcriptResult);
+                this.logger.log(`[${jobId}] Saved platform captions to DB.`);
+                this.gateway.sendProgress(jobId, 95, 'transcribe');
+                this.gateway.sendCompleted(jobId, transcriptResult, 'transcribe');
+                await this.cacheService.set(cacheKey, transcriptResult);
+                return transcriptResult;
+            }
 
+            // 2. Fallback: Download audio and transcribe
+            this.logger.log(`[${jobId}] No platform captions found, falling back to audio transcription.`);
             const audioPath = await this.downloadAudio(videoUrl, jobId);
             this.gateway.sendProgress(jobId, 30, 'transcribe');
 
@@ -120,15 +139,12 @@ export class TranscribeProcessor {
             this.gateway.sendProgress(jobId, 80, 'transcribe');
 
             const saveData = await this.transcriptionService.saveResult(job, transcript);
-            console.log('Saved transcription data to DB:', saveData);
+            this.logger.log(`[${jobId}] Saved audio transcription to DB.`);
             this.gateway.sendProgress(jobId, 95, 'transcribe');
 
             this.gateway.sendCompleted(jobId, transcript, 'transcribe');
-
-            // Cache the result
             await this.cacheService.set(cacheKey, transcript);
 
-            // fs.unlinkSync(videoPath);
             fs.unlinkSync(audioPath);
 
             return transcript;

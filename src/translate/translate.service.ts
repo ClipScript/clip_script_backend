@@ -6,6 +6,7 @@ import { CreateTranscriptionDto as CreateTranscriptionDto } from './dto/create-t
 import { TranscriptionRepository } from './transcription.repository';
 import type { Request } from 'express';
 import type { Job } from 'bull';
+import { CacheService } from 'src/common/cache.service';
 
 
 @Injectable()
@@ -14,6 +15,7 @@ export class TranscriptionService {
         @InjectQueue('transcription') private transcriptionQueue: Queue,
         private readonly transcriptionRepository: TranscriptionRepository,
         @Inject('REQUEST') private readonly request: Request,
+        private readonly cacheService: CacheService,
     ) {
 
     }
@@ -31,7 +33,6 @@ export class TranscriptionService {
             const job = await this.transcriptionQueue.add('transcribe-job', {
                 videoUrl: dto.videoUrl,
                 platform,
-                captchaToken: dto.captchaToken,
                 ip,
             }, {
                 attempts: 3,
@@ -42,6 +43,7 @@ export class TranscriptionService {
                 removeOnComplete: false,
                 removeOnFail: false,
             });
+
             return {
                 jobId: job.id,
                 status: 'queued',

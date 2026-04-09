@@ -9,6 +9,11 @@ import { TranscriptionRepository } from './transcription.repository';
 import { RecaptchaService } from '../common/recaptcha.service';
 import { ProgressGateway } from 'src/gateways/progress.gateway';
 import { CacheService } from 'src/common/cache.service';
+import { CaptionExtractorService } from 'src/common/caption-extractor.service';
+import { YoutubeCaptionsService } from 'src/common/youtube-captions.service';
+import { TikTokCaptionsService } from 'src/common/tiktok-captions.service';
+import { InstagramCaptionsService } from 'src/common/instagram-captions.service';
+import { AbuseProtectionService } from '../common/abuse-protection.service';
 
 @Module({
     imports: [
@@ -20,6 +25,18 @@ import { CacheService } from 'src/common/cache.service';
         ]),
     ],
     controllers: [TranscriptionController],
-    providers: [TranscriptionService, TranscribeProcessor, TranscriptionRepository, RecaptchaService, ProgressGateway, CacheService],
+    providers: [
+        TranscriptionService,
+        RecaptchaService,
+        AbuseProtectionService,
+        TranscriptionRepository,
+        ProgressGateway,
+        CacheService,
+        CaptionExtractorService,
+        YoutubeCaptionsService,
+        TikTokCaptionsService,
+        InstagramCaptionsService,
+        TranscribeProcessor,
+    ],
 })
 export class TranslateModule { }

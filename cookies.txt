@@ -11,13 +11,11 @@
 .instagram.com	TRUE	/	TRUE	1805068451	ps_n	1
 .instagram.com	TRUE	/	TRUE	0	rur	RVA,1985537168,1806593508:01fe3034e10b8a07e5c1bd2652742b082094f0ead1c5da38b9ef8532d5bc01471fbf2416
 .instagram.com	TRUE	/	TRUE	1806593495	sessionid	1985537168%3AyzSb2Nmid3MuB2%3A19%3AAYjMPYzfhHZuE4qPibgoX1XgNAOfbIpJU2hb5RMLNNE
-.instagram.com	TRUE	/	TRUE	1775662291	wd	1366x615
 .tiktok.com	TRUE	/	TRUE	1808737077	_ttp	2zHbwhShBqTrGQ93MzzPsea16hj
-.tiktok.com	TRUE	/	FALSE	1775063578	_wafchallengeid	eyJ2Ijp7ImEiOiIwV1Vkc1hnTmdKRzJHekk2K2FyclhKN3BDeU5XUy92UDBUdmdpcVpEQUljPSIsImIiOjE3NzUwNjM0NTgsImMiOiJBbEVqUjRXMm4xL1J3UENJVXkrY05td1k5RHRrWmJtWWVQaEVidGZhS01JPSJ9LCJzIjoiVVFRUnJ6SWNpa05ZWkZsQzRNc2NsVHRHOTh6S3B3aEZmL0xLOXA5MG9tWT0iLCJkIjoiTnpBPSJ9
 .tiktok.com	TRUE	/	TRUE	1776651869	cmpl_token	AgQYAPMF_hfkTtKxngvGUj7dPPMW96Ro3f-KjmChGQQ
 .tiktok.com	TRUE	/	TRUE	1803130921	cookie-consent	{%22optional%22:true%2C%22ga%22:true%2C%22af%22:true%2C%22fbp%22:true%2C%22lip%22:true%2C%22bing%22:true%2C%22ttads%22:true%2C%22reddit%22:true%2C%22hubspot%22:true%2C%22version%22:%22v10%22}
 .tiktok.com	TRUE	/	FALSE	1803003869	d_ticket	c67ef037f9cd26c59ce59d0f8b0da1d0e82a2
-.tiktok.com	TRUE	/	TRUE	1775926549	msToken	JcZGLqbVFNbTZCdHJfurvSApLFGohBDVLchy8cu10_OOvXJ21aSZRBcH7oPj_T09h6P8EWMrZrV2s2ULkvhQ7ZIbHfwtNsy8EQGdhUQ725rbLxLNn0oD8_JzO7UPB75M0pUqZ2icrfpJdZY=
+.tiktok.com	TRUE	/	TRUE	1776560439	msToken	L5eZpXvGFjQDFnxZ647h9SGnLGMUxPf39lYbAagxrDFt5YSnymF9D2_jcNb3Z4prstWOOnSdjFjP2WLEAhm5JD212ha7c4ruYV9tLcQEkP3q9BBWnROEcS3M8ILCSSukP_n_fBntEvWGSkM=
 .tiktok.com	TRUE	/	TRUE	1776651869	multi_sids	7034874826385523717%3A0f4a541ca23d6a5e4e74a8d174796d06
 .tiktok.com	TRUE	/	FALSE	1806596288	odin_tt	f7bac0a8e7e92d893a1247bb06e9fc143f53987bdc7d96e04a743e1fc3cdf692f98f466dd91068efeab0133401b282e87b5591ab71055603a902ac497dacf98e02fd4841e7df08d3a4eec7b11300102f
 .tiktok.com	TRUE	/	TRUE	1787019869	sessionid	0f4a541ca23d6a5e4e74a8d174796d06
@@ -32,16 +30,14 @@
 .tiktok.com	TRUE	/	FALSE	1787019869	store-idc	alisg
 .tiktok.com	TRUE	/	FALSE	1787019869	tt-target-idc	alisg
 .tiktok.com	TRUE	/	FALSE	1803419586	tt-target-idc-sign	jbPZYq-36oRB2IEb4MZ1Ld5CGsbFrsi8zS3Hmh2wtMB6ZXI5qRV61-ab7KB-k52ga6VkI2flxcmL_wqpPJ_joPzCY90UgSOOGp76nQEXp1XDRPEkeZ4Mt2kskqdb2uKMunJXWjyRtpUABKHE5PejD9yjE1upmug2Zt2G1PgsHHH40GYov9-vv7YZqmi9Z89wKGPlbckW1nkM8VDezIS6UF3npUAjZpB-W1C2NTSXKzUrkofgcFdgTx-DglFq7pcMlNs2cJD7kIJNxL44Qo119y-wRweusVntiQ-ykTtL6FPmeUOCrOkEnTzMntu-ZDuPifNQvFsSNVmhzQofBD-KZq5SSdpn7yIj_Otqngm5v-og0E4D-vyvx5is1uwtvegM_fmSEjPDKs9V6uZYHNZFNIByX8o7OrDmeKKiSMSeqkTYJTsQeDomTgsCzACCFQm4crxBNl820S23WaSLhpZTmANuwazLlCC2JlnQZpJxmsxSqZfDfeDTFikpWXuxo87d
-.tiktok.com	TRUE	/	TRUE	1790614549	tt_chain_token	Zm7Eh+mxWv7E9VHVXFDXHA==
+.tiktok.com	TRUE	/	TRUE	1791248439	tt_chain_token	Zm7Eh+mxWv7E9VHVXFDXHA==
 .tiktok.com	TRUE	/	TRUE	0	tt_csrf_token	mumCX0hd-ftfmN6zCIF_WNncVG_Mlhd4PPzY
 .tiktok.com	TRUE	/	TRUE	1787019869	tt_session_tlb_tag	sttt%7C5%7CD0pUHKI9al5OdKjRdHltBv________-iWU1wj40gnBkrT8xoNS-LsF2B4tKUcAZrNUw70fk_YTI%3D
 .tiktok.com	TRUE	/	TRUE	1806596285	ttwid	1%7C_VO2P15uB51pQQj07Ycw95cJSgRf0a50PwgaBHpNvdU%7C1775060284%7Cc48b95bdca6873e4eac4167515843211be5c4e95963676ff271755dad8a9f8d3
 .tiktok.com	TRUE	/	TRUE	1787019869	uid_tt	c286cbd13dfc2ccdc89b5c33b2467480188326076c4a06bd006eab237991cd26
 .tiktok.com	TRUE	/	TRUE	1787019869	uid_tt_ss	c286cbd13dfc2ccdc89b5c33b2467480188326076c4a06bd006eab237991cd26
-.tiktok.com	TRUE	/	FALSE	1775063578	waforiginalreid	https://www.tiktok.com/
 .www.tiktok.com	TRUE	/	TRUE	1795354866	delay_guest_mode_vid	5
 .www.tiktok.com	TRUE	/	FALSE	0	passport_fe_beating_status	true
-.www.tiktok.com	TRUE	/	TRUE	1775665080	perf_feed_cache	{%22expireTimestamp%22:1775232000000%2C%22itemIds%22:[%227620781597821996290%22%2C%227612814567281888542%22%2C%227616251513144364304%22]}
 .www.tiktok.com	TRUE	/	TRUE	1800980273	tiktok_webapp_theme	light
 .www.tiktok.com	TRUE	/	TRUE	1800980273	tiktok_webapp_theme_source	auto
 .youtube.com	TRUE	/	FALSE	1809161529	APISID	XCp9gkKbopLEOM3w/AWla-p9rlXiQexPmE
@@ -68,4 +64,3 @@
 www.tiktok.com	FALSE	/	FALSE	1779243869	last_login_method	sms_verification
 www.tiktok.com	FALSE	/	FALSE	1803001739	living_user_id	594725713837
 www.tiktok.com	FALSE	/	FALSE	1782836397	msToken	7p2V4PujIyIcmHoSNKG1gFpcqHBUkDSiWd-ZOx1yghOMlzpyb7tW8zpDOi-QjclR-KUq8ahUyTXlV8rOawovehLvJ17gNuPdXxxi30O6meOv3o4SPXgx5HfIJyaYG9n07AYl8sJNrEVS7O0=
-www.tiktok.com	FALSE	/	FALSE	1775126299	tt_ticket_guard_has_set_public_key	1

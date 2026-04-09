@@ -8,6 +8,11 @@ import { BullModule } from '@nestjs/bull';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DownloaderModule } from './downloader/downloader.module';
 import { CacheService } from './common/cache.service';
+import Redis from 'ioredis';
+import { YoutubeCaptionsService } from './common/youtube-captions.service';
+import { TikTokCaptionsService } from './common/tiktok-captions.service';
+import { InstagramCaptionsService } from './common/instagram-captions.service';
+import { CaptionExtractorService } from './common/caption-extractor.service';
 
 @Module({
   imports: [
@@ -16,18 +21,31 @@ import { CacheService } from './common/cache.service';
       ttl: 60, // fallback to 'ttl' for backward compatibility
       limit: 10, // 10 requests per minute per IP
     } as any), // cast to any to bypass type error for now
-    BullModule.forRoot({
-      // Redis config: use REDIS_URL if available, else fallback to localhost
-      redis: process.env.REDIS_URL
-        ? process.env.REDIS_URL
-        : { host: 'localhost', port: 6379 },
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        createClient: () => {
+          return process.env.REDIS_URL
+            ? new Redis(process.env.REDIS_URL, {
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+            })
+            : new Redis({ host: 'localhost', port: 6379 });
+        },
+      }),
     }),
     MongooseModule.forRoot(process.env.MONGODB_URI || ''),
     TranslateModule,
     DownloaderModule,
   ],
   controllers: [AppController],
-  providers: [AppService, CacheService],
+  providers: [
+    AppService,
+    CacheService,
+    YoutubeCaptionsService,
+    TikTokCaptionsService,
+    InstagramCaptionsService,
+    CaptionExtractorService,
+  ],
   exports: [CacheService],
 })
 export class AppModule { }

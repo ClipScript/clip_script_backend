@@ -29,9 +29,8 @@ export class CreateTranscriptionDto {
     @Transform(({ value }) => value?.trim())
     videoUrl: string;
 
-    @IsNotEmpty({ message: 'CAPTCHA token is required' })
     @IsString({ message: 'CAPTCHA token must be a string' })
     @MinLength(10, { message: 'Invalid CAPTCHA token' })
     @MaxLength(2000, { message: 'Invalid CAPTCHA token' })
-    captchaToken: string;
+    captchaToken?: string; // Now optional, only required for suspicious users
 }

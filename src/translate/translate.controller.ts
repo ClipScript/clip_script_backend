@@ -7,26 +7,34 @@ import { Res, Req } from '@nestjs/common';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
 import { RecaptchaService } from '../common/recaptcha.service';
+import { AbuseProtectionService } from '../common/abuse-protection.service';
 
 @Controller('transcription')
 export class TranscriptionController {
     constructor(
         private readonly transcriptionService: TranscriptionService,
         private readonly recaptchaService: RecaptchaService,
+        private readonly abuseProtection: AbuseProtectionService,
     ) { }
 
     @Post()
     async createTranscription(@Body() dto: CreateTranscriptionDto, @Req() req: Request) {
-        // CAPTCHA validation placeholder
-        if (!dto.captchaToken) {
-            throw new BadRequestException('CAPTCHA token is required');
-        }
-        const captchaValid = await this.recaptchaService.verify(dto.captchaToken);
-        if (!captchaValid) {
-            throw new BadRequestException('CAPTCHA verification failed');
-        }
         let ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
         if (Array.isArray(ip)) ip = ip[0];
+
+        // Abuse protection check
+        const abuseCheck = await this.abuseProtection.check(ip);
+        if (abuseCheck.requireCaptcha) {
+            if (!dto.captchaToken) {
+                throw new BadRequestException({ requireCaptcha: true, message: 'CAPTCHA token is required due to high usage' });
+            }
+            const captchaValid = await this.recaptchaService.verify(dto.captchaToken);
+            if (!captchaValid) {
+                throw new BadRequestException({ requireCaptcha: true, message: 'CAPTCHA verification failed' });
+            }
+            // Reset limiter after successful CAPTCHA
+            await this.abuseProtection.reset(ip);
+        }
         return this.transcriptionService.initiateTranscription(dto, ip);
     }
 
