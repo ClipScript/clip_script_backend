@@ -4,7 +4,7 @@ import { RateLimiterMemory } from 'rate-limiter-flexible';
 @Injectable()
 export class AbuseProtectionService {
     private limiter = new RateLimiterMemory({
-        points: 5, // 5 requests
+        points: 20, // 20 requests
         duration: 600, // per 60 seconds by IP
     });
 

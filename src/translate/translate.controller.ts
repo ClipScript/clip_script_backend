@@ -8,6 +8,8 @@ import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
 import { RecaptchaService } from '../common/recaptcha.service';
 import { AbuseProtectionService } from '../common/abuse-protection.service';
+import { SupadataService } from 'src/common/supadata.service';
+import { formatSupadataTranscript } from 'src/common/utils/vtt-parser';
 
 @Controller('transcription')
 export class TranscriptionController {
@@ -15,10 +17,13 @@ export class TranscriptionController {
         private readonly transcriptionService: TranscriptionService,
         private readonly recaptchaService: RecaptchaService,
         private readonly abuseProtection: AbuseProtectionService,
+        private readonly supadataService: SupadataService,
     ) { }
 
     @Post()
     async createTranscription(@Body() dto: CreateTranscriptionDto, @Req() req: Request) {
+
+
         let ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
         if (Array.isArray(ip)) ip = ip[0];
 
@@ -36,12 +41,10 @@ export class TranscriptionController {
             await this.abuseProtection.reset(ip);
         }
         return this.transcriptionService.initiateTranscription(dto, ip);
+
     }
 
-    @Get(':jobId/status')
-    async getStatus(@Param('jobId') jobId: string) {
-        return this.transcriptionService.getJobStatus(jobId);
-    }
+
 
     // @Get(':jobId/result')
     // async getResult(@Param('jobId') jobId: string) {

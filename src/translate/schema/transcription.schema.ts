@@ -7,6 +7,32 @@ export type Utterance = {
     end: number;
 };
 
+export type Author = {
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+};
+
+export type Media = {
+    thumbnailUrl: string;
+};
+
+export type Stats = {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+};
+
+export type Metadata = {
+    platform?: string;
+    videoUrl?: string;
+    description?: string;
+    author: Author;
+    media: Media;
+    stats: Stats;
+};
+
 @Schema({ timestamps: true })
 export class Transcription extends Document {
     @Prop({ required: true })
@@ -15,14 +41,29 @@ export class Transcription extends Document {
     @Prop({ required: true, index: true })
     ip: string;
 
-    @Prop({ required: true, index: true })
-    jobId: string;
-
-    @Prop({ required: true, index: true })
-    platform: string;
-
-    @Prop({ required: true })
-    videoUrl: string;
+    @Prop({
+        type: {
+            platform: { type: String },
+            videoUrl: { type: String },
+            description: { type: String },
+            author: {
+                username: { type: String, required: true },
+                displayName: { type: String, required: true },
+                avatarUrl: { type: String, required: true },
+            },
+            media: {
+                thumbnailUrl: { type: String, required: true },
+            },
+            stats: {
+                views: { type: Number, required: true },
+                likes: { type: Number, required: true },
+                comments: { type: Number, required: true },
+                shares: { type: Number, required: true },
+            },
+        },
+        required: true,
+    })
+    metadata: Metadata;
 
     @Prop({
         type: [
@@ -32,10 +73,10 @@ export class Transcription extends Document {
                 end: { type: Number, required: true },
             }
         ],
-        required: true,
+        required: false,
         default: [],
     })
-    utterances: Utterance[];
+    utterances?: Utterance[];
 }
 
 export const TranscriptionSchema = SchemaFactory.createForClass(Transcription);

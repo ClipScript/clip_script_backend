@@ -9,13 +9,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DownloaderModule } from './downloader/downloader.module';
 import { CacheService } from './common/cache.service';
 import Redis from 'ioredis';
-import { YoutubeCaptionsService } from './common/youtube-captions.service';
-import { TikTokCaptionsService } from './common/tiktok-captions.service';
-import { InstagramCaptionsService } from './common/instagram-captions.service';
-import { CaptionExtractorService } from './common/caption-extractor.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot({
       ttl: 60, // fallback to 'ttl' for backward compatibility
@@ -41,10 +40,6 @@ import { CaptionExtractorService } from './common/caption-extractor.service';
   providers: [
     AppService,
     CacheService,
-    YoutubeCaptionsService,
-    TikTokCaptionsService,
-    InstagramCaptionsService,
-    CaptionExtractorService,
   ],
   exports: [CacheService],
 })

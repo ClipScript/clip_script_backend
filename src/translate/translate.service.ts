@@ -7,6 +7,10 @@ import { TranscriptionRepository } from './transcription.repository';
 import type { Request } from 'express';
 import type { Job } from 'bull';
 import { CacheService } from 'src/common/cache.service';
+import { SupadataService } from 'src/common/supadata.service';
+import { formatSupadataTranscript } from 'src/common/utils/vtt-parser';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 
 
 @Injectable()
@@ -16,42 +20,50 @@ export class TranscriptionService {
         private readonly transcriptionRepository: TranscriptionRepository,
         @Inject('REQUEST') private readonly request: Request,
         private readonly cacheService: CacheService,
+        private readonly supadataService: SupadataService,
+        private readonly eventEmitter: EventEmitter2,
+
     ) {
 
     }
 
     async initiateTranscription(dto: CreateTranscriptionDto, ip: string) {
+        const { videoUrl } = dto;
         // Validate URL and platform
-        const platform = this.detectPlatform(dto.videoUrl);
+        const platform = this.detectPlatform(videoUrl);
 
         if (!platform) {
             throw new BadRequestException('Unsupported platform');
         }
 
-        // Add job to queue
-        try {
-            const job = await this.transcriptionQueue.add('transcribe-job', {
-                videoUrl: dto.videoUrl,
-                platform,
-                ip,
-            }, {
-                attempts: 3,
-                backoff: {
-                    type: 'exponential',
-                    delay: 2000,
-                },
-                removeOnComplete: false,
-                removeOnFail: false,
-            });
-
-            return {
-                jobId: job.id,
-                status: 'queued',
-            };
-        } catch (error) {
-            console.error('Error adding job to queue:', error);
-            throw new BadRequestException('Failed to add job to queue');
+        const cacheKey = `transcription:${videoUrl}`;
+        const cached = await this.cacheService.get(cacheKey);
+        if (cached) {
+            console.log(`Returning cached transcription for ${videoUrl}`);
+            return cached;
         }
+
+        const platformData = await this.supadataService.fetchTranscriptAndMetadata(dto.videoUrl);
+        console.log('Fetched platform data:', platformData);
+        const formatted = formatSupadataTranscript(platformData);
+
+        console.log('Formatted transcript:', formatted);
+
+        // Emit event for async DB/cache write
+        this.eventEmitter.emit('transcription.created', {
+            videoUrl,
+            cacheKey,
+            formatted,
+            platform,
+            ip,
+        });
+
+        const jobData = {
+            ...formatted,
+            videoUrl,
+        };
+
+        return jobData;
     }
 
     private detectPlatform(url: string): string | null {
@@ -59,58 +71,6 @@ export class TranscriptionService {
         if (url.includes('instagram.com')) return 'instagram';
         if (url.includes('youtube.com/shorts') || url.includes('youtu.be')) return 'youtube';
         return null;
-    }
-
-    async getJobStatus(jobId: string) {
-        const job = await this.transcriptionQueue.getJob(jobId);
-
-        if (!job) {
-            throw new NotFoundException('Job not found');
-        }
-
-
-        const state = await job.getState();
-        const progress = job.progress();
-
-        return {
-            jobId: job.id,
-            status: state,
-            progress,
-        };
-    }
-
-    async saveResult(job: Job, transcript: { transcript: string, utterances?: any[] }) {
-        const jobId = String(job.id);
-
-        console.log(`Saving result for job ${jobId}...`);
-
-        let transcriptDoc = await this.transcriptionRepository.findByJobId(jobId);
-
-        if (!transcriptDoc) {
-            const { ip, platform, videoUrl } = job.data;
-
-            let utterances: any[] = [];
-
-            // ✅ map sentences → utterances
-            if (transcript?.utterances && Array.isArray(transcript.utterances)) {
-                utterances = transcript.utterances.map((s: any) => ({
-                    text: s.text,
-                    start: s.start,
-                    end: s.end,
-                }));
-            }
-
-            transcriptDoc = await this.transcriptionRepository.create({
-                transcript: transcript?.transcript || '',
-                ip,
-                jobId,
-                platform,
-                videoUrl,
-                utterances,
-            });
-        }
-
-        return transcriptDoc;
     }
 
     async getRecentTranscribesForIp() {
