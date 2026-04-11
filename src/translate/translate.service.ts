@@ -44,10 +44,7 @@ export class TranscriptionService {
         }
 
         const platformData = await this.supadataService.fetchTranscriptAndMetadata(dto.videoUrl);
-        console.log('Fetched platform data:', platformData);
         const formatted = formatSupadataTranscript(platformData);
-
-        console.log('Formatted transcript:', formatted);
 
         // Emit event for async DB/cache write
         this.eventEmitter.emit('transcription.created', {

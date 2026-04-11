@@ -22,7 +22,7 @@ export class TranscriptionEventsHandler {
             });
             await this.cacheService.set(cacheKey, formatted, 60 * 60 * 24); // 24 hours
         } catch (err) {
-            // Optionally log error
+            console.log('Error handling transcription.created event:', err);
         }
     }
 }
